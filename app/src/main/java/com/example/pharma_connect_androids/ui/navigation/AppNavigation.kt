@@ -105,7 +105,12 @@ fun AppNavigation(navController: NavHostController) {
             MainScreen(
                 onNavigateToRegister = { navController.navigate(Screen.Register.route) },
                 onNavigateToJoinPharmacy = { navController.navigate(Screen.JoinPharmacy.route) },
-                onNavigateToAdminApplications = { navController.navigate(Screen.AdminApplications.route) }
+                onNavigateToAdminApplications = { appId ->
+                    navController.navigate(Screen.ApplicationDetail.createRoute(appId))
+                },
+                onNavigateToAdminApplicationList = { 
+                    navController.navigate(Screen.AdminApplications.route)
+                }
             )
         }
         
@@ -148,14 +153,14 @@ fun AppNavigation(navController: NavHostController) {
             )
         }
 
-        // Admin Application List Screen Route
-        composable(Screen.AdminApplications.route) { navBackStackEntry ->
-            AdminApplicationScreen(
-                onNavigateToDetail = { appId ->
-                    navController.navigate(Screen.ApplicationDetail.createRoute(appId))
-                }
-            )
-        }
+        // Admin Application List Screen Route - MOVED inside MainContentNavHost
+//        composable(Screen.AdminApplications.route) { navBackStackEntry ->
+//            AdminApplicationScreen(
+//                onNavigateToDetail = { appId ->
+//                    navController.navigate(Screen.ApplicationDetail.createRoute(appId))
+//                }
+//            )
+//        }
 
         // Application Detail Screen Route
         composable(

@@ -11,6 +11,15 @@ import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.outlined.Inventory2 // Using Inventory2 for outlined
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.outlined.PeopleOutline
+// Add necessary icon imports here:
+import androidx.compose.material.icons.filled.PendingActions
+import androidx.compose.material.icons.outlined.PendingActions
+import androidx.compose.material.icons.filled.LocalPharmacy
+import androidx.compose.material.icons.outlined.LocalPharmacy
+import androidx.compose.material.icons.filled.Medication // For Medicines
+import androidx.compose.material.icons.outlined.Medication // Use standard outlined icon
+import androidx.compose.material.icons.filled.AddCircle // For Add Medicine
+import androidx.compose.material.icons.outlined.AddCircleOutline
 
 /**
  * Represents items in the bottom navigation bar.
@@ -68,27 +77,38 @@ object BottomNavItems {
     // NOTE: Dashboard/Inventory routes need implementation in MainContentNavHost
     val OwnerItems = listOf(Dashboard, Inventory, ManagePharmacists, Profile)
 
-    // --- Admin Items ---
-     val Applications = BottomNavItem(
-        label = "Applications",
-        route = Screen.AdminApplications.route, // Use Screen object
-        selectedIcon = Icons.Filled.PendingActions, // Add import if needed
-        unselectedIcon = Icons.Outlined.PendingActions // Add import if needed
-    )
-     val Pharmacies = BottomNavItem(
+    // --- Admin Items (Matching the desired layout) ---
+    val AdminPharmacies = BottomNavItem(
         label = "Pharmacies",
-        route = "admin_pharmacies_screen", // Placeholder - Needs Screen def & NavGraph entry
-        selectedIcon = Icons.Filled.LocalPharmacy, // Add import if needed
-        unselectedIcon = Icons.Outlined.LocalPharmacy // Add import if needed
+        route = Screen.AdminPharmacies.route, // Needs Screen def & NavGraph entry
+        selectedIcon = Icons.Filled.LocalPharmacy,
+        unselectedIcon = Icons.Outlined.LocalPharmacy
     )
-     val Medicines = BottomNavItem(
+    val AdminMedicines = BottomNavItem(
         label = "Medicines",
-        route = "admin_medicines_screen", // Placeholder - Needs Screen def & NavGraph entry
-        selectedIcon = Icons.Filled.Medication, // Add import if needed
-        unselectedIcon = Icons.Outlined.Medication // Add import if needed
+        route = Screen.AdminMedicines.route, // Needs Screen def & NavGraph entry
+        selectedIcon = Icons.Filled.Medication,
+        unselectedIcon = Icons.Outlined.Medication // Use standard outlined icon
     )
-    // NOTE: Pharmacies/Medicines routes need implementation
-    val AdminItems = listOf(Applications, Pharmacies, Medicines) 
+    val AdminAddMedicine = BottomNavItem(
+        label = "Add Medicine",
+        route = Screen.AdminAddMedicine.route, // Needs Screen def & NavGraph entry
+        selectedIcon = Icons.Filled.AddCircle,
+        unselectedIcon = Icons.Outlined.AddCircleOutline
+    )
+    val AdminApplications = BottomNavItem(
+        label = "Applications",
+        route = Screen.AdminApplications.route, // This one is functional
+        selectedIcon = Icons.Filled.PendingActions,
+        unselectedIcon = Icons.Outlined.PendingActions
+    )
+    // Update AdminItems list to match the photo/request
+    val AdminItems = listOf(AdminPharmacies, AdminMedicines, AdminAddMedicine, AdminApplications)
 }
 
-// Add necessary icon imports:
+// Remove imports from the bottom
+// Remove unused placeholder icon imports if necessary
+// import androidx.compose.material.icons.filled.LocalPharmacy
+// import androidx.compose.material.icons.outlined.LocalPharmacy
+// import androidx.compose.material.icons.filled.Medication
+// import androidx.compose.material.icons.outlined.Medication

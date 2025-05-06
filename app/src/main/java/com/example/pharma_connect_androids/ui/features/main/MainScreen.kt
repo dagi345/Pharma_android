@@ -21,6 +21,7 @@ import com.example.pharma_connect_androids.ui.navigation.BottomNavigationBar
 import com.example.pharma_connect_androids.ui.navigation.Screen
 import com.example.pharma_connect_androids.ui.features.search.SearchScreen
 import com.example.pharma_connect_androids.ui.features.profile.ProfileScreen
+import com.example.pharma_connect_androids.ui.features.admin.AdminApplicationScreen
 
 /**
  * Main layout composable that includes the Scaffold and Bottom Navigation.
@@ -32,7 +33,8 @@ fun MainScreen(
     viewModel: MainViewModel = hiltViewModel(),
     onNavigateToRegister: () -> Unit,
     onNavigateToJoinPharmacy: () -> Unit,
-    onNavigateToAdminApplications: () -> Unit
+    onNavigateToAdminApplications: (applicationId: String) -> Unit,
+    onNavigateToAdminApplicationList: () -> Unit
 ) {
     val bottomNavController = rememberNavController()
     val mainState by viewModel.state.collectAsState()
@@ -61,7 +63,8 @@ fun MainScreen(
             innerPadding = innerPadding,
             onNavigateToRegister = onNavigateToRegister,
             onNavigateToJoinPharmacy = onNavigateToJoinPharmacy,
-            onNavigateToAdminApplications = onNavigateToAdminApplications
+            onNavigateToAdminApplications = onNavigateToAdminApplications,
+            onNavigateToAdminApplicationList = onNavigateToAdminApplicationList
         )
     }
 }
@@ -75,7 +78,8 @@ fun MainContentNavHost(
     innerPadding: PaddingValues,
     onNavigateToRegister: () -> Unit,
     onNavigateToJoinPharmacy: () -> Unit,
-    onNavigateToAdminApplications: () -> Unit
+    onNavigateToAdminApplications: (applicationId: String) -> Unit,
+    onNavigateToAdminApplicationList: () -> Unit
 ) {
     NavHost(
         navController = navController,
@@ -99,14 +103,25 @@ fun MainContentNavHost(
                         launchSingleTop = true
                     }
                 },
-                onNavigateToAdminApplications = onNavigateToAdminApplications,
+                onNavigateToAdminApplicationList = onNavigateToAdminApplicationList,
                 onNavigateToPharmacistList = { pharmacyId ->
                     navController.navigate(Screen.PharmacistList.createRoute(pharmacyId))
                 }
             )
         }
-        composable("dashboard_screen") { PlaceholderScreen("Dashboard") }
-        composable("inventory_screen") { PlaceholderScreen("Inventory") }
+        composable(Screen.AdminApplications.route) {
+            AdminApplicationScreen(
+                onNavigateToDetail = onNavigateToAdminApplications
+            )
+        }
+        // Placeholder screens for Admin
+        composable(Screen.AdminPharmacies.route) { PlaceholderScreen("Pharmacies") }
+        composable(Screen.AdminMedicines.route) { PlaceholderScreen("Medicines") }
+        composable(Screen.AdminAddMedicine.route) { PlaceholderScreen("Add Medicine") }
+
+        // Placeholders for Owner
+        composable(Screen.Dashboard.route) { PlaceholderScreen("Dashboard") }
+        composable(Screen.Inventory.route) { PlaceholderScreen("Inventory") }
     }
 }
 

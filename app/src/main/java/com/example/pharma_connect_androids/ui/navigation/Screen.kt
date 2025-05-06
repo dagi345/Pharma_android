@@ -31,6 +31,11 @@ sealed class Screen(val route: String) {
     object Dashboard : Screen("dashboard_screen") // Added for Owner Bottom Nav
     object Inventory : Screen("inventory_screen") // Added for Owner Bottom Nav
 
+    // Admin placeholder screens
+    object AdminPharmacies : Screen("admin_pharmacies_screen")
+    object AdminMedicines : Screen("admin_medicines_screen")
+    object AdminAddMedicine : Screen("admin_add_medicine_screen")
+
     // Define nested graph routes if needed
     object AuthNavGraph : Screen("auth_graph")
     object MainNavGraph : Screen("main_graph")

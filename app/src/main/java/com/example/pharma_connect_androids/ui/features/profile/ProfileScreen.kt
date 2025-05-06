@@ -17,7 +17,7 @@ import com.example.pharma_connect_androids.ui.theme.Pharma_connect_androidsTheme
 fun ProfileScreen(
     viewModel: ProfileViewModel = hiltViewModel(),
     onNavigateToAuth: () -> Unit, // Callback to navigate back to Auth graph after sign out
-    onNavigateToAdminApplications: () -> Unit, // For Admin
+    onNavigateToAdminApplicationList: () -> Unit, // For Admin
     onNavigateToPharmacistList: (pharmacyId: String) -> Unit // For Owner
 ) {
     val state by viewModel.state.collectAsState()
@@ -55,7 +55,7 @@ fun ProfileScreen(
 
                 // Admin Button
                 if (state.userRole?.equals("admin", ignoreCase = true) == true) {
-                    Button(onClick = onNavigateToAdminApplications) {
+                    Button(onClick = onNavigateToAdminApplicationList) {
                         Text("Review Applications")
                     }
                     Spacer(modifier = Modifier.height(16.dp))

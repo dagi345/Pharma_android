@@ -67,7 +67,7 @@ fun AdminApplicationScreen(
                             isUpdating = state.updateLoadingId == application._id,
                             updateError = state.updateErrorId?.takeIf { it.first == application._id }?.second,
                             onApprove = { viewModel.updateApplicationStatus(application._id, "Approved") },
-                            onReject = { viewModel.updateApplicationStatus(application._id, "Rejected") },
+                            onReject = { viewModel.updateApplicationStatus(application._id, "Closed") },
                             onClick = { onNavigateToDetail(application._id) }
                         )
                     }
