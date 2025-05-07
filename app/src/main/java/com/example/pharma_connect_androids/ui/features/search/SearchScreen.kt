@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.pharma_connect_androids.R // For placeholder image
 import com.example.pharma_connect_androids.data.models.SearchResultItem
-import com.example.pharma_connect_androids.ui.theme.Pharma_connect_androidsTheme
+import com.example.pharma_connect_androids.ui.theme.PharmaConnectAndroidSTheme
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -249,7 +249,7 @@ fun SearchResultItemCard(item: SearchResultItem) {
 @Preview(showBackground = true)
 @Composable
 fun SearchScreenPreview_Results() {
-    Pharma_connect_androidsTheme {
+    PharmaConnectAndroidSTheme {
         // Simulate state with results for preview
         val previewState = SearchScreenState(
             searchQuery = "Aspirin",
@@ -296,7 +296,7 @@ fun SearchScreenPreview_Results() {
 @Preview(showBackground = true)
 @Composable
 fun SearchScreenPreview_NoResults() {
-    Pharma_connect_androidsTheme {
+    PharmaConnectAndroidSTheme {
         // Simulate state with no results
          Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
              Text("No results found for \"NonExistentMedicine\"")
@@ -307,7 +307,7 @@ fun SearchScreenPreview_NoResults() {
 @Preview(showBackground = true)
 @Composable
 fun SearchScreenPreview_Error() {
-     Pharma_connect_androidsTheme {
+    PharmaConnectAndroidSTheme {
          // Simulate error state
          Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
              Column(horizontalAlignment = Alignment.CenterHorizontally) {

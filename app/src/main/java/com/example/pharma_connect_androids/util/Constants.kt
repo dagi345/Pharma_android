@@ -1,9 +1,8 @@
 package com.example.pharma_connect_androids.util
 
 object Constants {
-    // Replace with your actual backend base URL
-    // For physical device, use computer's local IP (found via ipconfig/ifconfig)
-    const val BASE_URL = "http://192.168.200.254:5000/"
+    // Base URL for the deployed backend
+    const val BASE_URL = "http://10.4.116.24:5000/"
     
     // Keys for SharedPreferences
     const val PREFS_NAME = "pharma_connect_prefs"

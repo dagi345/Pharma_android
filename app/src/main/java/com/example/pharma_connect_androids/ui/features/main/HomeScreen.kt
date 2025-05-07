@@ -21,7 +21,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.pharma_connect_androids.R // Assuming you have placeholder images in drawable
-import com.example.pharma_connect_androids.ui.theme.Pharma_connect_androidsTheme
+import com.example.pharma_connect_androids.ui.theme.PharmaConnectAndroidSTheme
 import androidx.navigation.NavController
 import com.example.pharma_connect_androids.ui.navigation.Screen // Ensure Screen is imported
 
@@ -181,7 +181,7 @@ fun PharmacyPlaceholderCard() {
 @Preview(showBackground = true)
 @Composable
 fun HomeScreenPreview() {
-    Pharma_connect_androidsTheme {
+    PharmaConnectAndroidSTheme {
         HomeScreen(
             onNavigateToRegister = {},
             onNavigateToJoinPharmacy = {}

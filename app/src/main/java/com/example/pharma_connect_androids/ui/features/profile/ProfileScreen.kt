@@ -11,7 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.pharma_connect_androids.ui.theme.Pharma_connect_androidsTheme
+import com.example.pharma_connect_androids.ui.theme.PharmaConnectAndroidSTheme
 
 @Composable
 fun ProfileScreen(
@@ -83,7 +83,7 @@ fun ProfileScreen(
 @Preview(showBackground = true)
 @Composable
 fun ProfileScreenPreview() {
-    Pharma_connect_androidsTheme {
+    PharmaConnectAndroidSTheme {
          // Simulate state for preview
          val previewState = ProfileScreenState(
              userEmail = "owner@example.com",

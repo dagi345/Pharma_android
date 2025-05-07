@@ -22,6 +22,8 @@ import com.example.pharma_connect_androids.ui.navigation.Screen
 import com.example.pharma_connect_androids.ui.features.search.SearchScreen
 import com.example.pharma_connect_androids.ui.features.profile.ProfileScreen
 import com.example.pharma_connect_androids.ui.features.admin.AdminApplicationScreen
+import com.example.pharma_connect_androids.ui.features.admin.AdminAddMedicineScreen
+import com.example.pharma_connect_androids.ui.features.admin.AdminMedicinesScreen
 
 /**
  * Main layout composable that includes the Scaffold and Bottom Navigation.
@@ -116,8 +118,12 @@ fun MainContentNavHost(
         }
         // Placeholder screens for Admin
         composable(Screen.AdminPharmacies.route) { PlaceholderScreen("Pharmacies") }
-        composable(Screen.AdminMedicines.route) { PlaceholderScreen("Medicines") }
-        composable(Screen.AdminAddMedicine.route) { PlaceholderScreen("Add Medicine") }
+        composable(Screen.AdminMedicines.route) { 
+            AdminMedicinesScreen()
+        }
+        composable(Screen.AdminAddMedicine.route) { 
+            AdminAddMedicineScreen()
+        }
 
         // Placeholders for Owner
         composable(Screen.Dashboard.route) { PlaceholderScreen("Dashboard") }

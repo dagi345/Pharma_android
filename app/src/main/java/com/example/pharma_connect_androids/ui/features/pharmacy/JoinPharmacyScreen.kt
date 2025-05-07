@@ -20,7 +20,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.pharma_connect_androids.ui.theme.Pharma_connect_androidsTheme
+import com.example.pharma_connect_androids.ui.theme.PharmaConnectAndroidSTheme
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.net.Uri
@@ -251,7 +251,7 @@ fun JoinPharmacyScreen(
 @Preview(showBackground = true)
 @Composable
 fun JoinPharmacyScreenPreview() {
-    Pharma_connect_androidsTheme {
+    PharmaConnectAndroidSTheme {
         JoinPharmacyScreen(onNavigateBack = {}, onSubmitSuccess = {}, onNavigateToMapPicker = { _, _ -> })
     }
 } 
