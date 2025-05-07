@@ -35,6 +35,12 @@ sealed class Screen(val route: String) {
     object AdminPharmacies : Screen("admin_pharmacies_screen")
     object AdminMedicines : Screen("admin_medicines_screen")
     object AdminAddMedicine : Screen("admin_add_medicine_screen")
+    object AdminUpdateMedicine : Screen("admin_update_medicine_screen/{medicineId}") {
+        fun createRoute(medicineId: String) = "admin_update_medicine_screen/$medicineId"
+    }
+    object AdminPharmacyDetail : Screen("admin_pharmacy_detail_screen/{pharmacyId}") { // New Detail screen route
+        fun createRoute(pharmacyId: String) = "admin_pharmacy_detail_screen/$pharmacyId"
+    }
 
     // Define nested graph routes if needed
     object AuthNavGraph : Screen("auth_graph")

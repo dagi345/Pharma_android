@@ -23,4 +23,11 @@ data class MedicineListResponse(
     val data: List<Medicine>,
     // Add other fields from the response if necessary, e.g., success, message, count
     // For now, focusing on the data array as per web frontend observation
+)
+
+@Serializable
+data class SingleMedicineResponse(
+    @SerialName("data")
+    val data: Medicine
+    // Potentially other fields like success, message
 ) 

@@ -13,6 +13,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import androidx.navigation.NavType
 import com.example.pharma_connect_androids.domain.model.UserRole
 import com.example.pharma_connect_androids.ui.components.PharmaConnectTopAppBar
 import com.example.pharma_connect_androids.ui.navigation.BottomNavItem
@@ -24,6 +26,9 @@ import com.example.pharma_connect_androids.ui.features.profile.ProfileScreen
 import com.example.pharma_connect_androids.ui.features.admin.AdminApplicationScreen
 import com.example.pharma_connect_androids.ui.features.admin.AdminAddMedicineScreen
 import com.example.pharma_connect_androids.ui.features.admin.AdminMedicinesScreen
+import com.example.pharma_connect_androids.ui.features.admin.UpdateMedicineScreen
+import com.example.pharma_connect_androids.ui.features.admin.AdminPharmaciesScreen
+import com.example.pharma_connect_androids.ui.features.admin.AdminPharmacyDetailScreen
 
 /**
  * Main layout composable that includes the Scaffold and Bottom Navigation.
@@ -116,13 +121,40 @@ fun MainContentNavHost(
                 onNavigateToDetail = onNavigateToAdminApplications
             )
         }
-        // Placeholder screens for Admin
-        composable(Screen.AdminPharmacies.route) { PlaceholderScreen("Pharmacies") }
+        // Placeholder screens for Admin -- becomes Actual Admin Screens
+        composable(Screen.AdminPharmacies.route) { 
+            AdminPharmaciesScreen(onNavigateToPharmacyDetail = { pharmacyId ->
+                navController.navigate(Screen.AdminPharmacyDetail.createRoute(pharmacyId))
+            })
+        }
         composable(Screen.AdminMedicines.route) { 
-            AdminMedicinesScreen()
+            AdminMedicinesScreen(onNavigateToUpdateMedicine = { medicineId ->
+                navController.navigate(Screen.AdminUpdateMedicine.createRoute(medicineId))
+            })
         }
         composable(Screen.AdminAddMedicine.route) { 
             AdminAddMedicineScreen()
+        }
+        composable(
+            route = Screen.AdminUpdateMedicine.route,
+            arguments = listOf(navArgument("medicineId") { type = NavType.StringType })
+        ) {
+            backStackEntry ->
+            val medicineId = backStackEntry.arguments?.getString("medicineId")
+            UpdateMedicineScreen(
+                medicineId = medicineId,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable(
+            route = Screen.AdminPharmacyDetail.route,
+            arguments = listOf(navArgument("pharmacyId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val pharmacyId = backStackEntry.arguments?.getString("pharmacyId")
+            AdminPharmacyDetailScreen(
+                pharmacyId = pharmacyId,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
 
         // Placeholders for Owner
