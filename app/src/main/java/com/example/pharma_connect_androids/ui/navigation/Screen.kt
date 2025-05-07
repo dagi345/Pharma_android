@@ -31,6 +31,19 @@ sealed class Screen(val route: String) {
     object Dashboard : Screen("dashboard_screen") // Added for Owner Bottom Nav
     object Inventory : Screen("inventory_screen") // Added for Owner Bottom Nav
 
+    // --- Owner Routes ---
+    object MyPharmacy : Screen("my_pharmacy_screen")
+    object OwnerAddMedicine : Screen("owner_add_medicine_screen") // Placeholder route
+    object OwnerInventory : Screen("owner_inventory_screen") // Placeholder route
+    object UpdatePharmacy : Screen("update_pharmacy_screen/{pharmacyId}") {
+        fun createRoute(pharmacyId: String) = "update_pharmacy_screen/$pharmacyId"
+    }
+    // New route for updating a specific inventory item
+    object UpdateInventoryItem : Screen("update_inventory_item_screen/{pharmacyId}/{inventoryItemId}") {
+        fun createRoute(pharmacyId: String, inventoryItemId: String) = 
+            "update_inventory_item_screen/$pharmacyId/$inventoryItemId"
+    }
+
     // Admin placeholder screens
     object AdminPharmacies : Screen("admin_pharmacies_screen")
     object AdminMedicines : Screen("admin_medicines_screen")

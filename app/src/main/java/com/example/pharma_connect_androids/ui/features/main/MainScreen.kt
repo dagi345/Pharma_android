@@ -29,6 +29,11 @@ import com.example.pharma_connect_androids.ui.features.admin.AdminMedicinesScree
 import com.example.pharma_connect_androids.ui.features.admin.UpdateMedicineScreen
 import com.example.pharma_connect_androids.ui.features.admin.AdminPharmaciesScreen
 import com.example.pharma_connect_androids.ui.features.admin.AdminPharmacyDetailScreen
+import com.example.pharma_connect_androids.ui.features.owner.MyPharmacyScreen
+import com.example.pharma_connect_androids.ui.features.pharmacy.JoinPharmacyScreen
+import com.example.pharma_connect_androids.ui.features.owner.OwnerAddMedicineScreen
+import com.example.pharma_connect_androids.ui.features.owner.OwnerInventoryScreen
+import com.example.pharma_connect_androids.ui.features.owner.UpdateInventoryItemScreen
 
 /**
  * Main layout composable that includes the Scaffold and Bottom Navigation.
@@ -88,9 +93,11 @@ fun MainContentNavHost(
     onNavigateToAdminApplications: (applicationId: String) -> Unit,
     onNavigateToAdminApplicationList: () -> Unit
 ) {
+    val startDestination = Screen.MyPharmacy.route
+    
     NavHost(
         navController = navController,
-        startDestination = Screen.Home.route,
+        startDestination = startDestination,
         modifier = Modifier.padding(innerPadding)
     ) {
         composable(Screen.Home.route) {
@@ -116,12 +123,52 @@ fun MainContentNavHost(
                 }
             )
         }
+        composable(Screen.MyPharmacy.route) {
+            MyPharmacyScreen(onNavigateToUpdatePharmacy = { pharmacyId ->
+                navController.navigate(Screen.UpdatePharmacy.createRoute(pharmacyId))
+            })
+        }
+        composable(Screen.OwnerAddMedicine.route) { 
+            OwnerAddMedicineScreen()
+        }
+        composable(Screen.OwnerInventory.route) { 
+            OwnerInventoryScreen(onNavigateToUpdateItem = { pharmacyId, inventoryItemId ->
+                 navController.navigate(Screen.UpdateInventoryItem.createRoute(pharmacyId, inventoryItemId))
+            })
+         }
+        composable(
+            route = Screen.UpdatePharmacy.route,
+            arguments = listOf(navArgument("pharmacyId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            // val pharmacyId = backStackEntry.arguments?.getString("pharmacyId") // ID is read by ViewModel via SavedStateHandle
+            // Reusing JoinPharmacyScreen for Update
+            // NOTE: JoinPharmacyScreen/ViewModel might need changes to support update mode
+            JoinPharmacyScreen(
+                // pharmacyIdToUpdate = pharmacyId, // Removed: ViewModel gets this from SavedStateHandle
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToMapPicker = { _, _ -> 
+                    navController.navigate(Screen.MapPicker.route)
+                },
+                onSubmitSuccess = { 
+                    navController.popBackStack()
+                }
+            )
+        }
+        composable(
+            route = Screen.UpdateInventoryItem.route,
+            arguments = listOf(
+                 navArgument("pharmacyId") { type = NavType.StringType },
+                 navArgument("inventoryItemId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+             // IDs are read by ViewModel using SavedStateHandle
+             UpdateInventoryItemScreen(onNavigateBack = { navController.popBackStack() })
+         }
         composable(Screen.AdminApplications.route) {
             AdminApplicationScreen(
                 onNavigateToDetail = onNavigateToAdminApplications
             )
         }
-        // Placeholder screens for Admin -- becomes Actual Admin Screens
         composable(Screen.AdminPharmacies.route) { 
             AdminPharmaciesScreen(onNavigateToPharmacyDetail = { pharmacyId ->
                 navController.navigate(Screen.AdminPharmacyDetail.createRoute(pharmacyId))
@@ -156,10 +203,6 @@ fun MainContentNavHost(
                 onNavigateBack = { navController.popBackStack() }
             )
         }
-
-        // Placeholders for Owner
-        composable(Screen.Dashboard.route) { PlaceholderScreen("Dashboard") }
-        composable(Screen.Inventory.route) { PlaceholderScreen("Inventory") }
     }
 }
 

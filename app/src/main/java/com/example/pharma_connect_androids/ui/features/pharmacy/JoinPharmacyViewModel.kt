@@ -1,11 +1,14 @@
 package com.example.pharma_connect_androids.ui.features.pharmacy
 
 import android.util.Log
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.pharma_connect_androids.data.local.SessionManager
 import com.example.pharma_connect_androids.data.models.PharmacyApplicationRequest
+import com.example.pharma_connect_androids.data.models.UpdatePharmacyRequest
 import com.example.pharma_connect_androids.data.repository.ApplicationRepository
+import com.example.pharma_connect_androids.data.repository.PharmacyRepository
 import com.example.pharma_connect_androids.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
@@ -40,31 +43,81 @@ data class JoinPharmacyState(
 
     val isLoading: Boolean = false,
     val submissionError: String? = null,
-    val submissionSuccess: Boolean = false
+    val submissionSuccess: Boolean = false,
+    val isUpdateMode: Boolean = false, // Flag for update mode
+    val isLoadingDetails: Boolean = false // Flag for loading initial details
 )
 
 @HiltViewModel
 class JoinPharmacyViewModel @Inject constructor(
     private val applicationRepository: ApplicationRepository,
-    private val sessionManager: SessionManager
+    private val pharmacyRepository: PharmacyRepository,
+    private val sessionManager: SessionManager,
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(JoinPharmacyState())
     val state: StateFlow<JoinPharmacyState> = _state.asStateFlow()
     private val TAG = "JoinPharmacyVM"
 
+    // Check if we are in update mode by getting pharmacyId from navigation args
+    private val pharmacyIdToUpdate: String? = savedStateHandle.get<String>("pharmacyId")
+
     init {
-        // Load owner ID asynchronously
-        viewModelScope.launch { 
-            loadOwnerId()
+        loadOwnerId() // Load owner ID regardless of mode
+        // If pharmacyId exists, set update mode and fetch details
+        pharmacyIdToUpdate?.let {
+            if (it.isNotBlank()) {
+                _state.value = _state.value.copy(isUpdateMode = true)
+                fetchPharmacyDetailsForUpdate(it)
+            }
         }
     }
 
     private fun loadOwnerId() {
-        // In a real app, check if user is logged in
         val userData = sessionManager.getUserData()
-        // Use placeholder if not logged in (shouldn't happen in real flow)
-        _state.value = _state.value.copy(ownerId = userData?.userId ?: "placeholder_owner_id")
+        // Only set ownerId if it's not already set (e.g., by fetchPharmacyDetailsForUpdate)
+        if (_state.value.ownerId == null) {
+             _state.value = _state.value.copy(ownerId = userData?.userId)
+        }
+    }
+
+    private fun fetchPharmacyDetailsForUpdate(id: String) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isLoadingDetails = true)
+            when(val result = pharmacyRepository.getPharmacyById(id)) {
+                is Resource.Success -> {
+                    result.data?.let { pharmacy ->
+                        _state.value = _state.value.copy(
+                            ownerName = pharmacy.ownerName ?: "", // Use fetched owner name
+                            pharmacyName = pharmacy.name,
+                            contactNumber = pharmacy.contactNumber,
+                            email = pharmacy.email,
+                            address = pharmacy.address,
+                            city = pharmacy.city ?: "",
+                            state = pharmacy.state ?: "",
+                            zipCode = pharmacy.zipcode ?: "",
+                            latitude = pharmacy.latitude ?: 9.03,
+                            longitude = pharmacy.longitude ?: 38.74,
+                            licenseNumber = pharmacy.licenseNumber ?: "",
+                            // Assume 'image' from Pharmacy model maps to pharmacyImage field
+                            // License image might need separate handling/field if distinct
+                            pharmacyImage = pharmacy.image ?: "", 
+                            licenseImage = pharmacy.image ?: "", // Placeholder: Using same image, adjust if needed
+                            ownerId = pharmacy.ownerId, // Use fetched owner ID
+                            isLoadingDetails = false,
+                            submissionError = null // Clear any previous errors
+                        )
+                    } ?: run {
+                         _state.value = _state.value.copy(isLoadingDetails = false, submissionError = "Failed to load pharmacy details.")
+                    }
+                }
+                is Resource.Error -> {
+                     _state.value = _state.value.copy(isLoadingDetails = false, submissionError = result.message ?: "Error loading pharmacy details.")
+                }
+                is Resource.Loading -> { /* Handled by isLoadingDetails flag */ }
+            }
+        }
     }
 
     // --- Input Change Handlers --- 
@@ -96,69 +149,96 @@ class JoinPharmacyViewModel @Inject constructor(
      }
     // --- End Input Handlers --- 
 
-    fun submitApplication() {
+    // Renamed for clarity
+    fun submitForm() {
+        if (_state.value.isUpdateMode) {
+            submitUpdate()
+        } else {
+            submitRegistration()
+        }
+    }
+
+    private fun submitRegistration() {
         viewModelScope.launch {
             val currentState = _state.value
             _state.value = currentState.copy(isLoading = true, submissionError = null, submissionSuccess = false)
-
-            // Validation (basic examples)
-            if (currentState.pharmacyName.isBlank() || currentState.email.isBlank() || /* ... other required fields */ currentState.licenseImage.isBlank() || currentState.pharmacyImage.isBlank()) {
-                _state.value = currentState.copy(isLoading = false, submissionError = "Please fill all required fields and select images.")
+            
+            if (currentState.pharmacyName.isBlank() || currentState.ownerName.isBlank() /* ... other validation */) {
+                _state.value = currentState.copy(isLoading = false, submissionError = "Please fill all required fields.")
                 return@launch
             }
-            
-            // --- Temporary Workaround: Use placeholder URLs --- 
-            val licenseImageUrl = "https://via.placeholder.com/150/0000FF/808080?text=LicensePlaceholder"
-            val pharmacyImageUrl = "https://via.placeholder.com/150/FF0000/FFFFFF?text=PharmacyPlaceholder"
-            // --- End Temporary Workaround ---
-            
-            // TODO (Real Implementation): Implement actual image upload here
-            // 1. Get URLs from uploaded images (licenseImageUrl, pharmacyImageUrl)
-            //    - This would likely involve calling another repository function
-            //    - Handle upload errors
+            // TODO: Implement real image upload and URL retrieval before creating request
+            val licenseImageUrl = "PLACEHOLDER_LICENSE_URL"
+            val pharmacyImageUrl = "PLACEHOLDER_PHARMACY_URL"
+             if (currentState.ownerId.isNullOrBlank()) {
+                  _state.value = currentState.copy(isLoading = false, submissionError = "User ID not found. Please log in again.")
+                  return@launch
+              }
 
-            // Create request body AFTER getting image URLs
             val request = PharmacyApplicationRequest(
-                ownerName = currentState.ownerName,
-                pharmacyName = currentState.pharmacyName,
-                contactNumber = currentState.contactNumber,
-                email = currentState.email,
-                address = currentState.address,
-                city = currentState.city,
-                state = currentState.state,
-                zipCode = currentState.zipCode,
-                latitude = currentState.latitude,
-                longitude = currentState.longitude,
-                licenseNumber = currentState.licenseNumber,
-                licenseImage = licenseImageUrl,
-                pharmacyImage = pharmacyImageUrl,
-                ownerId = currentState.ownerId ?: ""
+                 ownerName = currentState.ownerName, pharmacyName = currentState.pharmacyName, contactNumber = currentState.contactNumber, email = currentState.email, address = currentState.address, city = currentState.city, state = currentState.state, zipCode = currentState.zipCode, latitude = currentState.latitude, longitude = currentState.longitude, licenseNumber = currentState.licenseNumber, licenseImage = licenseImageUrl, pharmacyImage = pharmacyImageUrl, ownerId = currentState.ownerId
             )
 
-            // Check ownerId again before submitting
-             if (request.ownerId.isBlank()) {
-                 _state.value = currentState.copy(isLoading = false, submissionError = "Cannot submit application: User ID not found. Please log in again.")
+            when (val result = applicationRepository.submitApplication(request)) {
+                is Resource.Success -> { _state.value = _state.value.copy(isLoading = false, submissionSuccess = true, submissionError = null) }
+                is Resource.Error -> { _state.value = _state.value.copy(isLoading = false, submissionError = result.message ?: "Application submission failed", submissionSuccess = false) }
+                is Resource.Loading -> { /* Handled by isLoading flag */ }
+            }
+        }
+    }
+
+    private fun submitUpdate() {
+        val idToUpdate = pharmacyIdToUpdate ?: return // Exit if ID is missing for update
+        val currentState = _state.value // Capture state before launch
+
+        viewModelScope.launch {
+            _state.value = currentState.copy(isLoading = true, submissionError = null, submissionSuccess = false)
+
+             if (currentState.pharmacyName.isBlank() || currentState.ownerName.isBlank() /* ... other validation */) {
+                 _state.value = _state.value.copy(isLoading = false, submissionError = "Please fill all required fields.")
                  return@launch
              }
+            
+            // TODO: Image upload logic still needed here.
+            // Using current image values (which could be old URLs or new URIs)
+            val finalLicenseUrl = if(currentState.licenseImage.startsWith("http")) currentState.licenseImage else "PLACEHOLDER_UPDATED_LICENSE_URL"
+            val finalPharmacyUrl = if(currentState.pharmacyImage.startsWith("http")) currentState.pharmacyImage else "PLACEHOLDER_UPDATED_PHARMACY_URL"
 
-            // Make the API call
-            when (val result = applicationRepository.submitApplication(request)) {
-                is Resource.Success -> {
-                    _state.value = currentState.copy(
-                        isLoading = false,
-                        submissionSuccess = true,
-                        submissionError = null
-                    )
-                }
-                is Resource.Error -> {
-                    _state.value = currentState.copy(
-                        isLoading = false,
-                        submissionError = result.message ?: "Application submission failed",
-                        submissionSuccess = false
-                    )
-                }
-                 is Resource.Loading -> { /* Optional */ }
-            }
+            val request = UpdatePharmacyRequest(
+                 ownerName = currentState.ownerName, 
+                 name = currentState.pharmacyName,
+                 contactNumber = currentState.contactNumber, 
+                 email = currentState.email, 
+                 address = currentState.address, 
+                 city = currentState.city, 
+                 state = currentState.state, 
+                 zipCode = currentState.zipCode, 
+                 latitude = currentState.latitude, 
+                 longitude = currentState.longitude, 
+                 licenseNumber = currentState.licenseNumber, 
+                 licenseImage = finalLicenseUrl, 
+                 pharmacyImage = finalPharmacyUrl, 
+                 ownerId = currentState.ownerId
+            )
+
+            // Explicitly check result before setting success state
+             when (val result = pharmacyRepository.updatePharmacy(idToUpdate, request)) {
+                 is Resource.Success -> {
+                     _state.value = _state.value.copy(
+                         isLoading = false, 
+                         submissionSuccess = true, // Only set success on actual success
+                         submissionError = null
+                     )
+                 }
+                 is Resource.Error -> {
+                     _state.value = _state.value.copy(
+                         isLoading = false, 
+                         submissionError = result.message ?: "Pharmacy update failed",
+                         submissionSuccess = false // Ensure success is false on error
+                     )
+                 }
+                 is Resource.Loading -> { /* Handled by isLoading flag, no state change needed here */ }
+             }
         }
     }
 

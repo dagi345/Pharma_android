@@ -31,6 +31,9 @@ import com.google.android.gms.maps.model.LatLng
 @Composable
 fun JoinPharmacyScreen(
     viewModel: JoinPharmacyViewModel = hiltViewModel(),
+    // Parameter to indicate if this is for update - passed from NavHost
+    // Note: ViewModel now determines mode internally via SavedStateHandle
+    // pharmacyIdToUpdate: String?, 
     onNavigateBack: () -> Unit,
     onSubmitSuccess: () -> Unit,
     onNavigateToMapPicker: (Double, Double) -> Unit
@@ -38,7 +41,11 @@ fun JoinPharmacyScreen(
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
     val scrollState = rememberScrollState()
-    val TAG = "JoinPharmacyScreen" // Add TAG for logging
+    val TAG = "JoinPharmacyScreen"
+
+    val isUpdateMode = state.isUpdateMode // Get mode from VM state
+    val screenTitle = if (isUpdateMode) "Update Pharmacy Profile" else "Join Us As A Pharmacy"
+    val submitButtonText = if (isUpdateMode) "Update Profile" else "Submit Application"
 
     // --- Image Pickers --- 
     val licenseImagePicker = rememberLauncherForActivityResult(
@@ -66,18 +73,17 @@ fun JoinPharmacyScreen(
     )
     // --- End Image Pickers ---
 
-    // Show toast for errors
+    // Show toast for errors or success
     LaunchedEffect(key1 = state.submissionError) {
         state.submissionError?.let {
             Toast.makeText(context, it, Toast.LENGTH_LONG).show()
         }
     }
-
-    // Navigate back on successful submission
     LaunchedEffect(key1 = state.submissionSuccess) {
         if (state.submissionSuccess) {
-            Toast.makeText(context, "Application Submitted Successfully!", Toast.LENGTH_SHORT).show()
-            viewModel.resetSubmissionSuccess() // Reset state
+            val successMsg = if (isUpdateMode) "Profile Updated Successfully!" else "Application Submitted Successfully!"
+            Toast.makeText(context, successMsg, Toast.LENGTH_SHORT).show()
+            viewModel.resetSubmissionSuccess()
             onSubmitSuccess() // Navigate back
         }
     }
@@ -85,173 +91,102 @@ fun JoinPharmacyScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Join Us As A Pharmacy") },
+                title = { Text(screenTitle) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
-                 colors = TopAppBarDefaults.topAppBarColors(
-                     containerColor = Color(0xFFE9EFFF) // Match other top bar
-                 )
+                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFE9EFFF))
             )
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp) // Content padding
-                .verticalScroll(scrollState),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = "To join our Pharmacy Partner Program, simply fill out the form below...", // Shortened desc
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.Gray,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-
-            // Form Fields (Two columns not easily replicated without complex layout, use single column)
-            OutlinedTextField(
-                value = state.pharmacyName,
-                onValueChange = viewModel::onPharmacyNameChange,
-                label = { Text("Pharmacy Name *") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-            OutlinedTextField(
-                value = state.ownerName,
-                onValueChange = viewModel::onOwnerNameChange,
-                label = { Text("Owner Name *") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-             OutlinedTextField(
-                value = state.contactNumber,
-                onValueChange = viewModel::onContactNumberChange,
-                label = { Text("Contact Number *") },
-                modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                singleLine = true
-            )
-             OutlinedTextField(
-                value = state.email,
-                onValueChange = viewModel::onEmailChange,
-                label = { Text("Email *") },
-                modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                singleLine = true
-            )
-             OutlinedTextField(
-                value = state.address,
-                onValueChange = viewModel::onAddressChange,
-                label = { Text("Address (Street/Subcity) *") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-             OutlinedTextField(
-                value = state.city,
-                onValueChange = viewModel::onCityChange,
-                label = { Text("City *") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-             OutlinedTextField(
-                value = state.state,
-                onValueChange = viewModel::onStateChange,
-                label = { Text("State/Region *") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-            OutlinedTextField(
-                value = state.zipCode,
-                onValueChange = viewModel::onZipCodeChange,
-                label = { Text("Zip Code *") },
-                modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true
-            )
-             OutlinedTextField(
-                value = state.licenseNumber,
-                onValueChange = viewModel::onLicenseNumberChange,
-                label = { Text("License Number *") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // --- Image Uploads --- 
-            Text("Image Uploads", style = MaterialTheme.typography.titleMedium)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
-                 Button(onClick = { 
-                     // Launch the image picker for license image
-                     licenseImagePicker.launch("image/*")
-                 }) {
-                      // Show selected URI or default text
-                     Text(if(state.licenseImage.isNotBlank()) "License Added ✓" else "Add License Image")
+         // Show loading indicator if fetching details for update mode
+         if (state.isLoadingDetails) {
+             Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+                 CircularProgressIndicator()
+             }
+         } else {
+             Column(
+                 modifier = Modifier
+                     .fillMaxSize()
+                     .padding(paddingValues)
+                     .padding(16.dp)
+                     .verticalScroll(scrollState),
+                 verticalArrangement = Arrangement.spacedBy(12.dp)
+             ) {
+                 if (!isUpdateMode) {
+                     Text(
+                         text = "To join our Pharmacy Partner Program, simply fill out the form below...",
+                         style = MaterialTheme.typography.bodyMedium,
+                         color = Color.Gray,
+                         modifier = Modifier.padding(bottom = 16.dp)
+                     )
                  }
-                 Button(onClick = { 
-                      // Launch the image picker for pharmacy image
-                     pharmacyImagePicker.launch("image/*")
-                 }) {
-                      // Show selected URI or default text
-                     Text(if(state.pharmacyImage.isNotBlank()) "Pharmacy Img Added ✓" else "Add Pharmacy Image")
-                 }
-             }
-             // Display selected URIs (optional, for debugging/confirmation)
-             if (state.licenseImage.isNotBlank()) {
-                 Text("License: ${state.licenseImage}", style = MaterialTheme.typography.bodySmall, maxLines = 1)
-             }
-              if (state.pharmacyImage.isNotBlank()) {
-                 Text("Pharmacy: ${state.pharmacyImage}", style = MaterialTheme.typography.bodySmall, maxLines = 1)
-             }
+                
+                 // Form Fields - values are pre-filled from state
+                 OutlinedTextField(value = state.pharmacyName, onValueChange = viewModel::onPharmacyNameChange, label = { Text("Pharmacy Name *") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                 OutlinedTextField(value = state.ownerName, onValueChange = viewModel::onOwnerNameChange, label = { Text("Owner Name *") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                 OutlinedTextField(value = state.contactNumber, onValueChange = viewModel::onContactNumberChange, label = { Text("Contact Number *") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone), singleLine = true)
+                 OutlinedTextField(value = state.email, onValueChange = viewModel::onEmailChange, label = { Text("Email *") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), singleLine = true)
+                 OutlinedTextField(value = state.address, onValueChange = viewModel::onAddressChange, label = { Text("Address (Street/Subcity) *") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                 OutlinedTextField(value = state.city, onValueChange = viewModel::onCityChange, label = { Text("City *") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                 OutlinedTextField(value = state.state, onValueChange = viewModel::onStateChange, label = { Text("State/Region *") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                 OutlinedTextField(value = state.zipCode, onValueChange = viewModel::onZipCodeChange, label = { Text("Zip Code *") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
+                 OutlinedTextField(value = state.licenseNumber, onValueChange = viewModel::onLicenseNumberChange, label = { Text("License Number *") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // --- Map Location Picker --- 
-            Text("Pharmacy Location", style = MaterialTheme.typography.titleMedium)
-            Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-                 Column(Modifier.padding(16.dp)) {
-                    Text("Selected Location:", style = MaterialTheme.typography.bodyMedium)
-                     Text("Lat: ${state.latitude}, Lng: ${state.longitude}", style = MaterialTheme.typography.bodyMedium)
-                     Spacer(Modifier.height(8.dp))
-                     Button(onClick = { 
-                         // Navigate to Map Picker Screen
-                         onNavigateToMapPicker(state.latitude, state.longitude)
-                     }) {
-                         Text("Select Location on Map")
+                 Spacer(modifier = Modifier.height(16.dp))
+                 Text("Image Uploads", style = MaterialTheme.typography.titleMedium)
+                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
+                     Button(onClick = { licenseImagePicker.launch("image/*") }) {
+                         Text(if(state.licenseImage.isNotBlank()) "License Added ✓" else "Add License Image")
+                     }
+                      Button(onClick = { pharmacyImagePicker.launch("image/*") }) {
+                         Text(if(state.pharmacyImage.isNotBlank()) "Pharmacy Img Added ✓" else "Add Pharmacy Image")
                      }
                  }
-            }
-            // --- End Map Picker ---
+                 if (state.licenseImage.isNotBlank()) {
+                     Text("License: ${state.licenseImage}", style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                 }
+                 if (state.pharmacyImage.isNotBlank()) {
+                     Text("Pharmacy: ${state.pharmacyImage}", style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                 }
 
-             Spacer(modifier = Modifier.height(24.dp))
+                 Spacer(modifier = Modifier.height(16.dp))
+                 Text("Pharmacy Location", style = MaterialTheme.typography.titleMedium)
+                 Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                     Column(Modifier.padding(16.dp)) {
+                        Text("Selected Location:", style = MaterialTheme.typography.bodyMedium)
+                         Text("Lat: ${state.latitude}, Lng: ${state.longitude}", style = MaterialTheme.typography.bodyMedium)
+                         Spacer(Modifier.height(8.dp))
+                         Button(onClick = { 
+                             // Navigate to Map Picker Screen
+                             onNavigateToMapPicker(state.latitude, state.longitude)
+                         }) {
+                             Text("Select Location on Map")
+                         }
+                     }
+                 }
 
-             // Submit Button
-            Button(
-                onClick = { viewModel.submitApplication() },
-                enabled = !state.isLoading,
-                modifier = Modifier.align(Alignment.End)
-            ) {
-                if (state.isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
-                } else {
-                    Text("Submit Application")
-                }
-            }
-
-             Spacer(modifier = Modifier.height(16.dp)) // Extra space at bottom
-        }
+                 Spacer(modifier = Modifier.height(24.dp))
+                 Button(
+                     onClick = { viewModel.submitForm() }, // Call unified submit function
+                     enabled = !state.isLoading,
+                     modifier = Modifier.align(Alignment.End)
+                 ) {
+                     if (state.isLoading) {
+                         CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
+                     } else {
+                         Text(submitButtonText) // Use dynamic button text
+                     }
+                 }
+                 Spacer(modifier = Modifier.height(16.dp))
+             }
+         }
     }
 }
 
-
-@Preview(showBackground = true)
-@Composable
-fun JoinPharmacyScreenPreview() {
-    PharmaConnectAndroidSTheme {
-        JoinPharmacyScreen(onNavigateBack = {}, onSubmitSuccess = {}, onNavigateToMapPicker = { _, _ -> })
-    }
-} 
+// Preview needs update if needed
+// @Preview(showBackground = true)
+// @Composable
+// fun JoinPharmacyScreenPreview() { ... } 

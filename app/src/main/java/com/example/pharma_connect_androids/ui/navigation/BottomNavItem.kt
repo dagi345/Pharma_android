@@ -20,6 +20,10 @@ import androidx.compose.material.icons.filled.Medication // For Medicines
 import androidx.compose.material.icons.outlined.Medication // Use standard outlined icon
 import androidx.compose.material.icons.filled.AddCircle // For Add Medicine
 import androidx.compose.material.icons.outlined.AddCircleOutline
+import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.outlined.Storefront
+import androidx.compose.material.icons.filled.AddShoppingCart
+import androidx.compose.material.icons.outlined.AddShoppingCart
 
 /**
  * Represents items in the bottom navigation bar.
@@ -54,28 +58,27 @@ object BottomNavItems {
     )
     val UserItems = listOf(Home, Search, Profile)
 
-    // --- Owner Items ---
-    val Dashboard = BottomNavItem(
-        label = "Dashboard",
-        route = Screen.Dashboard.route, // Use Screen object
-        selectedIcon = Icons.Filled.Dashboard, 
-        unselectedIcon = Icons.Outlined.Dashboard
+    // --- Owner Items (Revised) ---
+    val MyPharmacy = BottomNavItem(
+        label = "My Pharmacy",
+        route = Screen.MyPharmacy.route, // New Route - Define in Screen.kt
+        selectedIcon = Icons.Filled.Storefront, 
+        unselectedIcon = Icons.Outlined.Storefront
     )
-    val Inventory = BottomNavItem(
+    val OwnerAddMedicine = BottomNavItem(
+        label = "Add Medicine",
+        route = Screen.OwnerAddMedicine.route, // New Route - Define in Screen.kt (placeholder)
+        selectedIcon = Icons.Filled.AddCircle, // Reusing AddCircle icon
+        unselectedIcon = Icons.Outlined.AddCircleOutline
+    )
+    val OwnerInventory = BottomNavItem(
         label = "Inventory",
-        route = Screen.Inventory.route, // Use Screen object
+        route = Screen.OwnerInventory.route, // New Route - Define in Screen.kt (placeholder)
         selectedIcon = Icons.Filled.Inventory, 
-        unselectedIcon = Icons.Outlined.Inventory2 // Using Inventory2 for outlined
+        unselectedIcon = Icons.Outlined.Inventory2
     )
-     val ManagePharmacists = BottomNavItem(
-        label = "Pharmacists",
-        // Linking to profile for now, owner accesses list via button on profile screen
-         route = Screen.Profile.route, 
-        selectedIcon = Icons.Filled.People, 
-        unselectedIcon = Icons.Outlined.PeopleOutline
-    )
-    // NOTE: Dashboard/Inventory routes need implementation in MainContentNavHost
-    val OwnerItems = listOf(Dashboard, Inventory, ManagePharmacists, Profile)
+    // Update OwnerItems list to ONLY include the required three
+    val OwnerItems = listOf(MyPharmacy, OwnerAddMedicine, OwnerInventory)
 
     // --- Admin Items (Matching the desired layout) ---
     val AdminPharmacies = BottomNavItem(
@@ -102,8 +105,10 @@ object BottomNavItems {
         selectedIcon = Icons.Filled.PendingActions,
         unselectedIcon = Icons.Outlined.PendingActions
     )
-    // Update AdminItems list to match the photo/request
     val AdminItems = listOf(AdminPharmacies, AdminMedicines, AdminAddMedicine, AdminApplications)
+
+    // --- Pharmacist Items (Assuming same as user for now) ---
+    val PharmacistItems = UserItems
 }
 
 // Remove imports from the bottom
