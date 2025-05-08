@@ -2,6 +2,8 @@ package com.example.pharma_connect_androids.data.models
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import com.example.pharma_connect_androids.util.LocalDateSerializer
+import java.time.LocalDate
 
 @Serializable
 data class Pharmacy(
@@ -26,8 +28,12 @@ data class Pharmacy(
     @SerialName("licenseNumber") // Assuming backend provides licenseNumber
     val licenseNumber: String? = null,
     @SerialName("image") // Assuming backend provides an image URL
-    val image: String? = null
-)
+    val image: String? = null,
+    @SerialName("googleMapsLink") // <<< Re-add the missing field
+    val googleMapsLink: String? = null
+) {
+    val pharmacyImage: String?=null
+}
 
 @Serializable
 data class PharmacyListResponse(

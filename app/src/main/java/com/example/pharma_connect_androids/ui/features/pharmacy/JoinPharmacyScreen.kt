@@ -34,7 +34,7 @@ fun JoinPharmacyScreen(
     // Note: ViewModel now determines mode internally via SavedStateHandle
     // pharmacyIdToUpdate: String?, 
     onNavigateBack: () -> Unit,
-    onSubmitSuccess: () -> Unit
+    onSubmitSuccess: @Composable () -> Unit
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
@@ -82,7 +82,6 @@ fun JoinPharmacyScreen(
             val successMsg = if (isUpdateMode) "Profile Updated Successfully!" else "Application Submitted Successfully!"
             Toast.makeText(context, successMsg, Toast.LENGTH_SHORT).show()
             viewModel.resetSubmissionSuccess()
-            onSubmitSuccess() // Navigate back
         }
     }
 
@@ -161,8 +160,9 @@ fun JoinPharmacyScreen(
                      modifier = Modifier.fillMaxWidth(),
                      isError = state.linkParseError != null,
                      supportingText = { 
-                         if(state.linkParseError != null) { 
-                             Text(state.linkParseError, color = MaterialTheme.colorScheme.error)
+                         val errorText = state.linkParseError
+                         if(errorText != null) { 
+                             Text(errorText, color = MaterialTheme.colorScheme.error)
                          } else {
                              Text("Find your pharmacy on Google Maps, click Share -> Copy link, and paste here.")
                          }

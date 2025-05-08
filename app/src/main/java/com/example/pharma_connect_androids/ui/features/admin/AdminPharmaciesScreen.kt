@@ -78,7 +78,7 @@ fun AdminPharmaciesScreen(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { viewModel.onSearchQueryChanged(it) },
-                label = { Text("Search Pharmacies (Name, Address, City)") },
+                label = { Text("Search Pharmacies") },
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                 singleLine = true,
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") }

@@ -1,6 +1,7 @@
 package com.example.pharma_connect_androids.ui.features.admin
 
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
@@ -22,6 +24,10 @@ import coil.compose.AsyncImage
 import com.example.pharma_connect_androids.data.models.Medicine
 import com.example.pharma_connect_androids.ui.theme.PharmaConnectAndroidSTheme
 import kotlinx.coroutines.launch
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.sp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -95,7 +101,7 @@ fun AdminMedicinesScreen(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { viewModel.onSearchQueryChanged(it) },
-                label = { Text("Search Medicines (Name or Category)") },
+                label = { Text("Search Medicines") },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -165,60 +171,83 @@ fun MedicineListItem(
     onDeleteClick: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    val cardBackgroundColor = MaterialTheme.colorScheme.surfaceVariant 
+    val accentColor = MaterialTheme.colorScheme.secondaryContainer // Light blue accent
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        shape = MaterialTheme.shapes.medium, 
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp), 
+        colors = CardDefaults.cardColors(containerColor = cardBackgroundColor)
     ) {
         Row(
-            modifier = Modifier
-                .padding(horizontal = 12.dp, vertical = 8.dp) // Adjusted padding
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.fillMaxWidth(), 
+            verticalAlignment = Alignment.CenterVertically // Make items stretch to row height
         ) {
-            AsyncImage(
-                model = medicine.image,
-                contentDescription = "Medicine Image",
+            // Accent Color Bar
+            Box(
                 modifier = Modifier
-                    .size(72.dp) // Slightly larger image
-                    .padding(end = 12.dp)
+                    .fillMaxHeight() // Fill the height of the Row
+                    .width(8.dp) // Width of the accent bar
+                    .background(accentColor)
             )
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(text = medicine.name, style = MaterialTheme.typography.titleMedium)
-                Text(text = "Category: ${medicine.category}", style = MaterialTheme.typography.bodySmall)
-                Text(
-                    text = medicine.description,
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
+
+            // Content Row (with padding now)
+            Row(
+                 modifier = Modifier
+                    .padding(horizontal = 16.dp, vertical = 12.dp) // Padding for content
+                    .weight(1f), // Takes remaining space
+                 verticalAlignment = Alignment.Top 
+            ) {
+                 AsyncImage(
+                    model = medicine.image,
+                    contentDescription = "Medicine Image",
+                    modifier = Modifier
+                        .size(72.dp) 
+                        .clip(MaterialTheme.shapes.small) 
+                        .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+                    contentScale = ContentScale.Crop
+                 )
+                 Spacer(modifier = Modifier.width(16.dp))
+                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                     Text(
+                        text = medicine.name,
+                        style = MaterialTheme.typography.titleLarge, 
+                        fontWeight = FontWeight.SemiBold,
+                         color = MaterialTheme.colorScheme.onSurfaceVariant // Ensure good contrast
+                     )
+                     Text(
+                        text = "Category: ${medicine.category}",
+                        style = MaterialTheme.typography.bodyMedium, 
+                        color = MaterialTheme.colorScheme.onSurfaceVariant // Ensure good contrast
+                     )
+                     Text(
+                        text = medicine.description,
+                        style = MaterialTheme.typography.bodyMedium,
+                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f), // Slightly faded
+                        maxLines = 3, 
+                        overflow = TextOverflow.Ellipsis
+                     )
+                 }
             }
-            Box {
+            // Overflow Menu Box (outside the inner content Row)
+             Box(modifier = Modifier.padding(vertical = 8.dp)) { // Add some vertical padding to align better
                 IconButton(onClick = { showMenu = true }) {
-                    Icon(Icons.Default.MoreVert, contentDescription = "More actions")
+                    Icon(Icons.Default.MoreVert, contentDescription = "More actions", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                DropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false }
-                ) {
-                    DropdownMenuItem(
+                 DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                     DropdownMenuItem(
                         text = { Text("Update") },
-                        onClick = {
-                            onUpdateClick()
-                            showMenu = false
-                        },
+                        onClick = { onUpdateClick(); showMenu = false },
                         leadingIcon = { Icon(Icons.Default.Edit, contentDescription = "Update")}
-                    )
-                    DropdownMenuItem(
+                     )
+                     DropdownMenuItem(
                         text = { Text("Delete") },
-                        onClick = {
-                            onDeleteClick()
-                            showMenu = false
-                        },
+                        onClick = { onDeleteClick(); showMenu = false },
                         leadingIcon = { Icon(Icons.Default.Delete, contentDescription = "Delete")}
-                    )
-                }
-            }
+                     )
+                 }
+             }
         }
     }
 }

@@ -90,7 +90,7 @@ fun PharmacyDetailContent(pharmacy: Pharmacy) {
     // Image at the top
     AsyncImage(
         model = ImageRequest.Builder(context)
-            .data(pharmacy.image)
+            .data(pharmacy.pharmacyImage)
             .crossfade(true)
             .placeholder(R.drawable.placeholder_image) // TODO: Add a real placeholder drawable
             .error(R.drawable.placeholder_image) // TODO: Add a real error drawable
