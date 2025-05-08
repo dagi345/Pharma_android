@@ -36,8 +36,9 @@ data class JoinPharmacyState(
     val latitude: Double = 9.03, // Placeholder coordinate
     val longitude: Double = 38.74, // Placeholder coordinate
     val licenseNumber: String = "",
-    val licenseImage: String = "", // Placeholder / TODO: Handle image URI
-    val pharmacyImage: String = "", // Placeholder / TODO: Handle image URI
+    val licenseImage: String = "", // URI or URL
+    val pharmacyImage: String = "", // URI or URL
+    val googleMapsLink: String = "", // New field for Maps Link
 
     val ownerId: String? = null, // Will be fetched from SessionManager
 
@@ -45,7 +46,8 @@ data class JoinPharmacyState(
     val submissionError: String? = null,
     val submissionSuccess: Boolean = false,
     val isUpdateMode: Boolean = false, // Flag for update mode
-    val isLoadingDetails: Boolean = false // Flag for loading initial details
+    val isLoadingDetails: Boolean = false, // Flag for loading initial details
+    val linkParseError: String? = null // New field for link parsing errors
 )
 
 @HiltViewModel
@@ -106,7 +108,9 @@ class JoinPharmacyViewModel @Inject constructor(
                             licenseImage = pharmacy.image ?: "", // Placeholder: Using same image, adjust if needed
                             ownerId = pharmacy.ownerId, // Use fetched owner ID
                             isLoadingDetails = false,
-                            submissionError = null // Clear any previous errors
+                            submissionError = null, // Clear any previous errors
+                            googleMapsLink = pharmacy.googleMapsLink ?: "", // Use fetched googleMapsLink
+                            linkParseError = null // Clear any previous link parse errors
                         )
                     } ?: run {
                          _state.value = _state.value.copy(isLoadingDetails = false, submissionError = "Failed to load pharmacy details.")
@@ -135,19 +139,39 @@ class JoinPharmacyViewModel @Inject constructor(
          Log.d("JoinPharmacyVM", "Location Selected (Placeholder): Lat=$lat, Lng=$lng")
         _state.value = _state.value.copy(latitude = lat, longitude = lng)
      }
-     fun onLicenseImageSelected(uriOrUrl: String) { // Placeholder for URI or uploaded URL
-         Log.d(TAG, "onLicenseImageSelected called with: $uriOrUrl")
-         val previousState = _state.value
-         _state.value = _state.value.copy(licenseImage = uriOrUrl)
-         Log.d(TAG, "State after license image update: ${_state.value}")
-     }
-    fun onPharmacyImageSelected(uriOrUrl: String) { // Placeholder for URI or uploaded URL
-         Log.d(TAG, "onPharmacyImageSelected called with: $uriOrUrl")
-         val previousState = _state.value
-         _state.value = _state.value.copy(pharmacyImage = uriOrUrl)
-          Log.d(TAG, "State after pharmacy image update: ${_state.value}")
-     }
-    // --- End Input Handlers --- 
+     fun onLicenseImageSelected(uriOrUrl: String) { _state.value = _state.value.copy(licenseImage = uriOrUrl) }
+    fun onPharmacyImageSelected(uriOrUrl: String) { _state.value = _state.value.copy(pharmacyImage = uriOrUrl) }
+    
+    fun onGoogleMapsLinkChange(link: String) {
+        _state.value = _state.value.copy(googleMapsLink = link, linkParseError = null)
+        // Attempt to parse immediately or on focus loss/button click?
+        // Let's parse immediately for simplicity, but debounce might be better in real app.
+        parseCoordinatesFromLink(link)
+    }
+    // --- End Input Handlers ---
+
+    private fun parseCoordinatesFromLink(link: String) {
+        // Regex to find patterns like @<lat>,<lng>,... in Google Maps URLs
+        // Example: https://www.google.com/maps/place/SomePlace/@9.12345,-38.54321,15z
+        val regex = "/@(-?\\d+\\.\\d+),(-?\\d+\\.\\d+),?".toRegex()
+        val match = regex.find(link)
+
+        if (match != null && match.groupValues.size == 3) {
+            val lat = match.groupValues[1].toDoubleOrNull()
+            val lng = match.groupValues[2].toDoubleOrNull()
+            if (lat != null && lng != null) {
+                Log.d(TAG, "Parsed coordinates: Lat=$lat, Lng=$lng")
+                _state.value = _state.value.copy(latitude = lat, longitude = lng, linkParseError = null)
+            } else {
+                _state.value = _state.value.copy(linkParseError = "Could not parse numbers from link")
+            }
+        } else {
+            // Clear coordinates if link is invalid or doesn't contain coords
+             _state.value = _state.value.copy(linkParseError = if(link.isNotBlank()) "Invalid or unsupported Google Maps link format" else null)
+             // Optionally reset lat/lng to defaults if link becomes invalid?
+             // _state.value = _state.value.copy(latitude = 9.03, longitude = 38.74) 
+        }
+    }
 
     // Renamed for clarity
     fun submitForm() {

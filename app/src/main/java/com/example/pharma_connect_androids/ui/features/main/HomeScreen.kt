@@ -28,8 +28,7 @@ import com.example.pharma_connect_androids.ui.navigation.Screen // Ensure Screen
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    onNavigateToRegister: () -> Unit,
-    onNavigateToJoinPharmacy: () -> Unit
+    onNavigateToRegister: () -> Unit
 ) {
     val scrollState = rememberScrollState()
 
@@ -67,12 +66,6 @@ fun HomeScreen(
                      onNavigateToRegister()
                  }) {
                      Text("Sign Up")
-                 }
-                 Spacer(modifier = Modifier.width(8.dp))
-                 OutlinedButton(onClick = { 
-                     onNavigateToJoinPharmacy()
-                 }) {
-                     Text("Join As Pharmacy")
                  }
              }
         }
@@ -183,8 +176,7 @@ fun PharmacyPlaceholderCard() {
 fun HomeScreenPreview() {
     PharmaConnectAndroidSTheme {
         HomeScreen(
-            onNavigateToRegister = {},
-            onNavigateToJoinPharmacy = {}
+            onNavigateToRegister = {}
         )
     }
 } 

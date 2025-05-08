@@ -25,7 +25,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.net.Uri
 import android.util.Log
-import com.google.android.gms.maps.model.LatLng
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,8 +34,7 @@ fun JoinPharmacyScreen(
     // Note: ViewModel now determines mode internally via SavedStateHandle
     // pharmacyIdToUpdate: String?, 
     onNavigateBack: () -> Unit,
-    onSubmitSuccess: () -> Unit,
-    onNavigateToMapPicker: (Double, Double) -> Unit
+    onSubmitSuccess: () -> Unit
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
@@ -101,8 +99,7 @@ fun JoinPharmacyScreen(
             )
         }
     ) { paddingValues ->
-         // Show loading indicator if fetching details for update mode
-         if (state.isLoadingDetails) {
+         if (state.isLoadingDetails && state.isUpdateMode) { // Show loading only in update mode
              Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
                  CircularProgressIndicator()
              }
@@ -153,20 +150,27 @@ fun JoinPharmacyScreen(
                  }
 
                  Spacer(modifier = Modifier.height(16.dp))
-                 Text("Pharmacy Location", style = MaterialTheme.typography.titleMedium)
-                 Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-                     Column(Modifier.padding(16.dp)) {
-                        Text("Selected Location:", style = MaterialTheme.typography.bodyMedium)
-                         Text("Lat: ${state.latitude}, Lng: ${state.longitude}", style = MaterialTheme.typography.bodyMedium)
-                         Spacer(Modifier.height(8.dp))
-                         Button(onClick = { 
-                             // Navigate to Map Picker Screen
-                             onNavigateToMapPicker(state.latitude, state.longitude)
-                         }) {
-                             Text("Select Location on Map")
+
+                 // --- Google Maps Link Input --- 
+                 Text("Pharmacy Location Link", style = MaterialTheme.typography.titleMedium)
+                 OutlinedTextField(
+                     value = state.googleMapsLink,
+                     onValueChange = viewModel::onGoogleMapsLinkChange,
+                     label = { Text("Google Maps Link *") },
+                     placeholder = { Text("Paste Google Maps URL here...") },
+                     modifier = Modifier.fillMaxWidth(),
+                     isError = state.linkParseError != null,
+                     supportingText = { 
+                         if(state.linkParseError != null) { 
+                             Text(state.linkParseError, color = MaterialTheme.colorScheme.error)
+                         } else {
+                             Text("Find your pharmacy on Google Maps, click Share -> Copy link, and paste here.")
                          }
-                     }
-                 }
+                     },
+                     singleLine = true
+                 )
+                 // Display Parsed Coords (Optional for debugging)
+                 // Text("Parsed Coords: Lat=${state.latitude}, Lng=${state.longitude}", style = MaterialTheme.typography.bodySmall)
 
                  Spacer(modifier = Modifier.height(24.dp))
                  Button(

@@ -17,7 +17,6 @@ sealed class Screen(val route: String) {
     object Search : Screen("search_screen") // Added for Bottom Nav
     object Profile : Screen("profile_screen") // Added for Bottom Nav
     object JoinPharmacy : Screen("join_pharmacy_screen") // Added Join Pharmacy route
-    object MapPicker : Screen("map_picker_screen") // Added Map Picker route
     object AdminApplications : Screen("admin_applications_screen") // Added Admin route
     // Route for viewing single application detail
     object ApplicationDetail : Screen("application_detail/{applicationId}") {

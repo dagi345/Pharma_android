@@ -1,23 +1,19 @@
 package com.example.pharma_connect_androids.ui.features.main
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import com.example.pharma_connect_androids.domain.model.UserRole
-import com.example.pharma_connect_androids.ui.components.PharmaConnectTopAppBar
-import com.example.pharma_connect_androids.ui.navigation.BottomNavItem
 import com.example.pharma_connect_androids.ui.navigation.BottomNavItems
 import com.example.pharma_connect_androids.ui.navigation.BottomNavigationBar
 import com.example.pharma_connect_androids.ui.navigation.Screen
@@ -34,6 +30,10 @@ import com.example.pharma_connect_androids.ui.features.pharmacy.JoinPharmacyScre
 import com.example.pharma_connect_androids.ui.features.owner.OwnerAddMedicineScreen
 import com.example.pharma_connect_androids.ui.features.owner.OwnerInventoryScreen
 import com.example.pharma_connect_androids.ui.features.owner.UpdateInventoryItemScreen
+import com.example.pharma_connect_androids.ui.features.pharmacy.JoinPharmacyViewModel
+import com.google.android.gms.maps.model.LatLng
+import androidx.compose.runtime.livedata.observeAsState
+import com.example.pharma_connect_androids.ui.components.PharmaConnectTopAppBar
 
 /**
  * Main layout composable that includes the Scaffold and Bottom Navigation.
@@ -44,7 +44,6 @@ import com.example.pharma_connect_androids.ui.features.owner.UpdateInventoryItem
 fun MainScreen(
     viewModel: MainViewModel = hiltViewModel(),
     onNavigateToRegister: () -> Unit,
-    onNavigateToJoinPharmacy: () -> Unit,
     onNavigateToAdminApplications: (applicationId: String) -> Unit,
     onNavigateToAdminApplicationList: () -> Unit
 ) {
@@ -55,7 +54,7 @@ fun MainScreen(
         UserRole.OWNER -> BottomNavItems.OwnerItems
         UserRole.ADMIN -> BottomNavItems.AdminItems
         UserRole.USER -> BottomNavItems.UserItems
-        UserRole.PHARMACIST -> BottomNavItems.UserItems
+        UserRole.PHARMACIST -> BottomNavItems.PharmacistItems
         UserRole.UNKNOWN -> BottomNavItems.UserItems
     }
 
@@ -74,7 +73,6 @@ fun MainScreen(
             navController = bottomNavController,
             innerPadding = innerPadding,
             onNavigateToRegister = onNavigateToRegister,
-            onNavigateToJoinPharmacy = onNavigateToJoinPharmacy,
             onNavigateToAdminApplications = onNavigateToAdminApplications,
             onNavigateToAdminApplicationList = onNavigateToAdminApplicationList
         )
@@ -89,11 +87,10 @@ fun MainContentNavHost(
     navController: NavHostController,
     innerPadding: PaddingValues,
     onNavigateToRegister: () -> Unit,
-    onNavigateToJoinPharmacy: () -> Unit,
     onNavigateToAdminApplications: (applicationId: String) -> Unit,
     onNavigateToAdminApplicationList: () -> Unit
 ) {
-    val startDestination = Screen.MyPharmacy.route
+    val startDestination = Screen.Home.route
     
     NavHost(
         navController = navController,
@@ -102,24 +99,23 @@ fun MainContentNavHost(
     ) {
         composable(Screen.Home.route) {
             HomeScreen(
-                onNavigateToRegister = onNavigateToRegister,
-                onNavigateToJoinPharmacy = onNavigateToJoinPharmacy
+                onNavigateToRegister = onNavigateToRegister
             )
         }
         composable(Screen.Search.route) {
             SearchScreen()
         }
-        composable(Screen.Profile.route) {
-            ProfileScreen(
-                onNavigateToAuth = {
-                    navController.navigate(Screen.Home.route) {
-                        popUpTo(Screen.Home.route) { inclusive = true }
-                        launchSingleTop = true
-                    }
+        composable(Screen.JoinPharmacy.route) { backStackEntry ->
+            JoinPharmacyScreen(
+                onNavigateBack = { 
+                    navController.navigate(Screen.Home.route) { popUpTo(Screen.JoinPharmacy.route) { inclusive = true } }
                 },
-                onNavigateToAdminApplicationList = onNavigateToAdminApplicationList,
-                onNavigateToPharmacistList = { pharmacyId ->
-                    navController.navigate(Screen.PharmacistList.createRoute(pharmacyId))
+                onSubmitSuccess = { 
+                    val joinViewModel: JoinPharmacyViewModel = hiltViewModel(backStackEntry)
+                    joinViewModel.resetSubmissionSuccess() 
+                    navController.navigate(Screen.Home.route) { 
+                        popUpTo(Screen.Home.route) { inclusive = true }
+                    }
                 }
             )
         }
@@ -140,15 +136,8 @@ fun MainContentNavHost(
             route = Screen.UpdatePharmacy.route,
             arguments = listOf(navArgument("pharmacyId") { type = NavType.StringType })
         ) { backStackEntry ->
-            // val pharmacyId = backStackEntry.arguments?.getString("pharmacyId") // ID is read by ViewModel via SavedStateHandle
-            // Reusing JoinPharmacyScreen for Update
-            // NOTE: JoinPharmacyScreen/ViewModel might need changes to support update mode
             JoinPharmacyScreen(
-                // pharmacyIdToUpdate = pharmacyId, // Removed: ViewModel gets this from SavedStateHandle
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToMapPicker = { _, _ -> 
-                    navController.navigate(Screen.MapPicker.route)
-                },
                 onSubmitSuccess = { 
                     navController.popBackStack()
                 }
@@ -161,7 +150,6 @@ fun MainContentNavHost(
                  navArgument("inventoryItemId") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-             // IDs are read by ViewModel using SavedStateHandle
              UpdateInventoryItemScreen(onNavigateBack = { navController.popBackStack() })
          }
         composable(Screen.AdminApplications.route) {

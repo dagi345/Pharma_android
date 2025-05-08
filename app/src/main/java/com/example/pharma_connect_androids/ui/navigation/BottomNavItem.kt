@@ -24,6 +24,8 @@ import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.outlined.Storefront
 import androidx.compose.material.icons.filled.AddShoppingCart
 import androidx.compose.material.icons.outlined.AddShoppingCart
+import androidx.compose.material.icons.filled.AddBusiness // Import for Join Us
+import androidx.compose.material.icons.outlined.AddBusiness // Import for Join Us
 
 /**
  * Represents items in the bottom navigation bar.
@@ -37,7 +39,7 @@ data class BottomNavItem(
 
 // Define the actual items - Add more as needed for different roles
 object BottomNavItems {
-    // --- Common/User Items ---
+    // --- Common/User Items (Revised) ---
     val Home = BottomNavItem(
         label = "Home",
         route = Screen.Home.route, // Matches route in AppNavigation
@@ -50,13 +52,18 @@ object BottomNavItems {
         selectedIcon = Icons.Filled.Search,
         unselectedIcon = Icons.Outlined.Search
     )
-    val Profile = BottomNavItem(
-        label = "Profile",
-        route = Screen.Profile.route, // Use route from Screen object
-        selectedIcon = Icons.Filled.AccountCircle,
-        unselectedIcon = Icons.Outlined.AccountCircle
+    // Removed Profile Item from User Nav
+    // val Profile = BottomNavItem(...) 
+    
+    // New Join Us Item
+    val JoinUs = BottomNavItem(
+        label = "Join Us",
+        route = Screen.JoinPharmacy.route, // Reuse existing route
+        selectedIcon = Icons.Filled.AddBusiness, 
+        unselectedIcon = Icons.Outlined.AddBusiness
     )
-    val UserItems = listOf(Home, Search, Profile)
+    // Update UserItems list
+    val UserItems = listOf(Home, Search, JoinUs)
 
     // --- Owner Items (Revised) ---
     val MyPharmacy = BottomNavItem(
@@ -108,7 +115,7 @@ object BottomNavItems {
     val AdminItems = listOf(AdminPharmacies, AdminMedicines, AdminAddMedicine, AdminApplications)
 
     // --- Pharmacist Items (Assuming same as user for now) ---
-    val PharmacistItems = UserItems
+    val PharmacistItems = UserItems // Assuming Pharmacists also see Home, Search, Join Us
 }
 
 // Remove imports from the bottom

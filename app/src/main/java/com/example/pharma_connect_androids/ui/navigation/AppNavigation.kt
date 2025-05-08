@@ -1,7 +1,9 @@
 package com.example.pharma_connect_androids.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.material3.Text
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -101,10 +103,8 @@ fun AppNavigation(navController: NavHostController) {
 
         // Route that leads to the MainScreen (Scaffold with Bottom Nav)
         composable(Screen.MainNavGraph.route) {
-            // Pass the navigation actions using the top-level navController
             MainScreen(
                 onNavigateToRegister = { navController.navigate(Screen.Register.route) },
-                onNavigateToJoinPharmacy = { navController.navigate(Screen.JoinPharmacy.route) },
                 onNavigateToAdminApplications = { appId ->
                     navController.navigate(Screen.ApplicationDetail.createRoute(appId))
                 },
@@ -113,54 +113,6 @@ fun AppNavigation(navController: NavHostController) {
                 }
             )
         }
-        
-        // Join Pharmacy Screen Route (at the top level for now)
-        composable(Screen.JoinPharmacy.route) { backStackEntry ->
-             JoinPharmacyScreen(
-                 onNavigateBack = { navController.popBackStack() },
-                 onNavigateToMapPicker = { currentLat, currentLng ->
-                    navController.navigate(Screen.MapPicker.route)
-                 },
-                 onSubmitSuccess = { 
-                     navController.popBackStack() 
-                 }
-             )
-             navController.currentBackStackEntry
-                ?.savedStateHandle
-                ?.getLiveData<LatLng>("selected_location")?.observe(backStackEntry) { result ->
-                    navController.currentBackStackEntry?.savedStateHandle?.remove<LatLng>("selected_location")
-                    
-                    val viewModelProvider = ViewModelProvider(backStackEntry)
-                    val viewModel = viewModelProvider.get(JoinPharmacyViewModel::class.java)
-                    
-                    viewModel.onLocationSelected(result.latitude, result.longitude)
-                 }
-        }
-
-        // Map Picker Screen Route
-        composable(Screen.MapPicker.route) {
-            val viewModel: JoinPharmacyViewModel = hiltViewModel(navController.previousBackStackEntry!!)
-            val initialLatLng = LatLng(viewModel.state.collectAsState().value.latitude, viewModel.state.collectAsState().value.longitude)
-            MapPickerScreen(
-                initialLatLng = initialLatLng,
-                onLocationSelected = { latLng ->
-                    navController.previousBackStackEntry
-                        ?.savedStateHandle
-                        ?.set("selected_location", latLng)
-                    navController.popBackStack()
-                },
-                onNavigateBack = { navController.popBackStack() }
-            )
-        }
-
-        // Admin Application List Screen Route - MOVED inside MainContentNavHost
-//        composable(Screen.AdminApplications.route) { navBackStackEntry ->
-//            AdminApplicationScreen(
-//                onNavigateToDetail = { appId ->
-//                    navController.navigate(Screen.ApplicationDetail.createRoute(appId))
-//                }
-//            )
-//        }
 
         // Application Detail Screen Route
         composable(

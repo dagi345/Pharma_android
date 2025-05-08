@@ -2,7 +2,7 @@ package com.example.pharma_connect_androids.util
 
 object Constants {
     // Base URL for the deployed backend
-    const val BASE_URL = "http://10.4.116.24:5000/"
+    const val BASE_URL = "http://192.168.159.241:5000/"
     
     // Keys for SharedPreferences
     const val PREFS_NAME = "pharma_connect_prefs"
