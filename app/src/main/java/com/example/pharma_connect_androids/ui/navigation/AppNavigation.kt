@@ -105,18 +105,7 @@ fun AppNavigation(navController: NavHostController) {
 
         // Route that leads to the MainScreen (Scaffold with Bottom Nav)
         composable(Screen.MainNavGraph.route) {
-            MainScreen(
-                onNavigateToRegister = { navController.navigate(Screen.Register.route) },
-                onNavigateToAdminApplications = { appId ->
-                    navController.navigate(Screen.ApplicationDetail.createRoute(appId))
-                },
-                onNavigateToAdminApplicationList = { 
-                    navController.navigate(Screen.AdminApplications.route)
-                },
-                onNavigateToPharmacyDetail = { pharmacyId ->
-                    navController.navigate(Screen.UserPharmacyDetail.createRoute(pharmacyId))
-                }
-            )
+            MainScreen(appNavController = navController)
         }
 
         // Application Detail Screen Route

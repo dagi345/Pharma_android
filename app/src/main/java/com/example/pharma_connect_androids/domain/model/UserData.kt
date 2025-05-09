@@ -8,5 +8,7 @@ import kotlinx.serialization.Serializable
 data class UserData(
     val userId: String,
     val role: String,
-    val pharmacyId: String? // Nullable
+    val pharmacyId: String?, // Nullable
+    val firstName: String?,  // Added
+    val lastName: String?   // Added
 ) 

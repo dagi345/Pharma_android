@@ -51,7 +51,9 @@ class AuthRepository @Inject constructor(
                     val userData = UserData(
                         userId = responseBody.data.userId,
                         role = responseBody.data.role,
-                        pharmacyId = responseBody.data.pharmacyId
+                        pharmacyId = responseBody.data.pharmacyId,
+                        firstName = null,
+                        lastName = null
                     )
                     sessionManager.saveUserData(userData)
 

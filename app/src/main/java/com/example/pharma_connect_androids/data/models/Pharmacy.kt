@@ -30,7 +30,8 @@ data class Pharmacy(
     @SerialName("image") // Assuming backend provides an image URL
     val image: String? = null,
     @SerialName("googleMapsLink") // <<< Re-add the missing field
-    val googleMapsLink: String? = null
+    val googleMapsLink: String? = null,
+    val distance: Double? = null // Added for client-side distance calculation
 ) {
     val contact: String? = null
     val pharmacyImage: String?=null

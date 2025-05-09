@@ -53,7 +53,7 @@ fun HomeScreen(
                 .padding(16.dp)
         ) {
             Text(
-                text = "Find medicines, compare prices, and check availability instantly.",
+                text = "Find medicines",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 16.dp)
@@ -112,66 +112,8 @@ fun HomeScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
 
-        // 3. About Us Section
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFFE9EFFF)) // Light blue background like lightbg
-                .padding(vertical = 32.dp, horizontal = 16.dp)
-        ) {
-            // Simple Column layout for now, add Image later if needed
-            Text(
-                text = "About US",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF286AA7), // Primary color
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-            Text(
-                text = "At Pharma Connect, we're dedicated to making it easier for you to find the medicines you need. Our platform connects you with trusted pharmacies across the city, giving you access to medicine availability, prices, and locations all in one place. With a quick search, you can compare prices and check real-time availability to save time and avoid unnecessary trips.\n\nPharma Connect ensures that finding the right medicine is simple, efficient, and hassle-free. We believe in leveraging technology to improve access to healthcare. By connecting people to pharmacies seamlessly, Pharma Connect is transforming the way you find and access the medicines you need.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF808080) // Body text color
-            )
-        }
 
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // 4. Product Demo Section
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFFE9EFFF)) // Light blue background like lightbg
-                .padding(vertical = 32.dp, horizontal = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally // Center align content
-        ) {
-            Text(
-                text = "Product Demo",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF286AA7), // Primary color
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-            Text(
-                text = "Our platform is easy to use. Here is a short demo of our product.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF808080), // Body text color
-                 modifier = Modifier.padding(bottom = 16.dp),
-                 textAlign = TextAlign.Center
-            )
-            // Placeholder Box for Demo Video/Image
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(0.8f) // Take up 80% of width
-                    .height(200.dp)
-                    .background(Color.Gray)
-            ) {
-                Text("Demo Placeholder", Modifier.align(Alignment.Center), color = Color.White)
-            }
-             // Add placeholder for illustration if needed
-             // Image(painter = painterResource(id = R.drawable.product_demo_placeholder), ...)
-        }
 
         // TODO: Add Footer Section
         Spacer(modifier = Modifier.height(32.dp))

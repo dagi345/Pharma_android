@@ -37,6 +37,8 @@ class SessionManager @Inject constructor(context: Context) {
             putString(Constants.KEY_USER_ID, userData.userId)
             putString(Constants.KEY_USER_ROLE, userData.role)
             putString(Constants.KEY_PHARMACY_ID, userData.pharmacyId) // Store even if null
+            putString(Constants.KEY_USER_FIRST_NAME, userData.firstName)
+            putString(Constants.KEY_USER_LAST_NAME, userData.lastName)
             apply()
         }
     }
@@ -45,9 +47,17 @@ class SessionManager @Inject constructor(context: Context) {
         val userId = sharedPreferences.getString(Constants.KEY_USER_ID, null)
         val role = sharedPreferences.getString(Constants.KEY_USER_ROLE, null)
         val pharmacyId = sharedPreferences.getString(Constants.KEY_PHARMACY_ID, null)
+        val firstName = sharedPreferences.getString(Constants.KEY_USER_FIRST_NAME, null)
+        val lastName = sharedPreferences.getString(Constants.KEY_USER_LAST_NAME, null)
 
         return if (userId != null && role != null) {
-            UserData(userId = userId, role = role, pharmacyId = pharmacyId)
+            UserData(
+                userId = userId,
+                role = role,
+                pharmacyId = pharmacyId,
+                firstName = firstName,
+                lastName = lastName
+            )
         } else {
             null
         }

@@ -54,23 +54,19 @@ fun UserPharmacyDetailScreen(
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
             // TEMPORARY DEBUG TEXT
-            Text("Debug Info:")
-            Text("Pharmacy Name: ${state.pharmacy?.name ?: "Not loaded"}")
-            Text("Pharmacy Contact: ${state.pharmacy?.contact ?: "No contact info"}")
-            Text("Is Contact Blank: ${state.pharmacy?.contact?.isBlank().toString() ?: "N/A"}")
-            // END TEMPORARY DEBUG TEXT
 
             when {
                 state.isLoading -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
                 }
                 state.error != null -> {
                     Text(
                         text = state.error!!, // Smart-cast to non-null
-                        modifier = Modifier.align(Alignment.Center).padding(16.dp),
+                        modifier = Modifier.align(Alignment.CenterHorizontally).padding(16.dp),
                         color = MaterialTheme.colorScheme.error
                     )
                 }
+
                 state.pharmacy != null -> {
                     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                         PharmacyDetailContent(pharmacy = state.pharmacy!!) // Smart-cast to non-null
@@ -78,7 +74,7 @@ fun UserPharmacyDetailScreen(
                 }
                 else -> {
                     // This case covers: !isLoading && error == null && pharmacy == null
-                    Text("Pharmacy details not found.", modifier = Modifier.align(Alignment.Center))
+                    Text("Pharmacy details not found.", modifier = Modifier.align(Alignment.CenterHorizontally))
                 }
             }
         }

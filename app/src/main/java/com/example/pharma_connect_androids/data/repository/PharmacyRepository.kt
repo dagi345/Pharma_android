@@ -13,12 +13,25 @@ import com.example.pharma_connect_androids.util.handleApiResponse // Assuming th
 import javax.inject.Inject
 import javax.inject.Singleton
 import android.util.Log
+import com.example.pharma_connect_androids.data.models.PharmacyListResponse
+import com.example.pharma_connect_androids.util.Json
+import com.example.pharma_connect_androids.util.SerializationException
+import com.example.pharma_connect_androids.util.HttpException
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import java.io.IOException
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.SerializationException
 
 @Singleton // Make repository a singleton
 class PharmacyRepository @Inject constructor(
     private val pharmacyApiService: PharmacyApiService,
     private val sessionManager: SessionManager // Inject SessionManager
 ) {
+
+    private val TAG = "PharmacyRepository"
 
     suspend fun getPharmacists(pharmacyId: String): Resource<List<Pharmacist>?> {
         // val token = sessionManager.getToken()
@@ -160,6 +173,43 @@ class PharmacyRepository @Inject constructor(
             }
         } catch (e: Exception) {
             Resource.Error("Network error updating inventory item: ${e.localizedMessage}")
+        }
+    }
+
+    suspend fun getNearbyPharmacies(userLat: Double, userLon: Double): Flow<Resource<List<Pharmacy>>> = flow {
+        emit(Resource.Loading())
+        try {
+            Log.d(TAG, "Fetching nearby pharmacies for lat: $userLat, lon: $userLon")
+            val response = pharmacyApiService.getNearbyPharmacies(latitude = userLat, longitude = userLon, radiusInKm = 20)
+
+            if (response.isSuccessful && response.body() != null) {
+                val pharmacies = response.body()!!.data
+                Log.d(TAG, "Successfully fetched ${pharmacies.size} nearby pharmacies.")
+                emit(Resource.Success(pharmacies))
+            } else {
+                val errorBody = response.errorBody()?.string()
+                Log.e(TAG, "Failed to fetch nearby pharmacies: Code=${response.code()}, Message=${response.message()}, ErrorBody=$errorBody")
+                val parsedErrorMsg = try {
+                    errorBody?.let {
+                        kotlinx.serialization.json.Json.parseToJsonElement(it).jsonObject["message"]?.jsonPrimitive?.content
+                    }
+                } catch (e: Exception) { null }
+                val errorMsg = parsedErrorMsg ?: errorBody ?: "Failed to fetch nearby pharmacies (Code: ${response.code()})"
+                emit(Resource.Error(errorMsg))
+            }
+        } catch (e: HttpException) {
+            Log.e(TAG, "Nearby pharmacies HTTP error: ${e.code()} - ${e.message()}", e)
+            emit(Resource.Error(e.localizedMessage ?: "An unexpected HTTP error occurred while fetching nearby pharmacies."))
+        } catch (e: IOException) {
+            Log.e(TAG, "Nearby pharmacies network error", e)
+            emit(Resource.Error("Couldn't reach server for nearby pharmacies. Check internet connection."))
+        } catch (e: Exception) {
+            Log.e(TAG, "Nearby pharmacies general error", e)
+            if (e is SerializationException) {
+                emit(Resource.Error("Failed to understand server response for nearby pharmacies."))
+            } else {
+                emit(Resource.Error(e.localizedMessage ?: "An unexpected error occurred while fetching nearby pharmacies."))
+            }
         }
     }
 } 

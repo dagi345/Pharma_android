@@ -9,6 +9,7 @@ import com.example.pharma_connect_androids.data.models.AddMedicineInventoryReque
 import com.example.pharma_connect_androids.data.models.InventoryListResponse
 import com.example.pharma_connect_androids.data.models.SingleInventoryItemResponse
 import com.example.pharma_connect_androids.data.models.UpdateInventoryItemRequest
+import com.example.pharma_connect_androids.data.models.Pharmacy
 import retrofit2.Response
 import retrofit2.http.GET
 import retrofit2.http.Header
@@ -17,6 +18,7 @@ import retrofit2.http.DELETE
 import retrofit2.http.PATCH
 import retrofit2.http.Body
 import retrofit2.http.POST
+import retrofit2.http.Query
 
 interface PharmacyApiService {
 
@@ -68,4 +70,11 @@ interface PharmacyApiService {
         @Path("id") pharmacyId: String,
         @Body request: AddMedicineInventoryRequest
     ): Response<Unit> // Assuming simple response
+
+    @GET("pharmacies/nearby") // Or your actual endpoint path
+    suspend fun getNearbyPharmacies(
+        @Query("latitude") latitude: Double,
+        @Query("longitude") longitude: Double,
+        @Query("radius") radiusInKm: Int = 10 // Optional: search radius in KM, default to 10km
+    ): Response<PharmacyListResponse> // Assuming your backend returns a list of pharmacies
 } 

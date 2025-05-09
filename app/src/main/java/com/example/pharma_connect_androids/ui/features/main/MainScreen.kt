@@ -34,6 +34,43 @@ import com.example.pharma_connect_androids.ui.features.pharmacy.JoinPharmacyView
 import com.google.android.gms.maps.model.LatLng
 import androidx.compose.runtime.livedata.observeAsState
 import com.example.pharma_connect_androids.ui.components.PharmaConnectTopAppBar
+import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.LaunchedEffect
+import android.Manifest
+import android.app.Activity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ContentScale
+import androidx.compose.material3.painterResource
+import androidx.compose.material3.TextAlign
+import androidx.compose.material3.Preview
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import com.example.pharma_connect_androids.R
+import com.example.pharma_connect_androids.data.models.Pharmacy
+import coil.compose.AsyncImage
+import androidx.core.app.ActivityCompat
 
 /**
  * Main layout composable that includes the Scaffold and Bottom Navigation.
@@ -42,14 +79,23 @@ import com.example.pharma_connect_androids.ui.components.PharmaConnectTopAppBar
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
-    viewModel: MainViewModel = hiltViewModel(),
-    onNavigateToRegister: () -> Unit,
-    onNavigateToAdminApplications: (applicationId: String) -> Unit,
-    onNavigateToAdminApplicationList: () -> Unit,
-    onNavigateToPharmacyDetail: (pharmacyId: String) -> Unit
+    mainViewModel: MainViewModel = hiltViewModel(),
+    appNavController: NavHostController,
 ) {
     val bottomNavController = rememberNavController()
-    val mainState by viewModel.state.collectAsState()
+    val mainState by mainViewModel.state.collectAsState()
+
+    LaunchedEffect(mainState.currentUser) {
+        if (mainState.currentUser == null) {
+            if (appNavController.currentDestination?.route?.startsWith("login") == false &&
+                appNavController.currentDestination?.route != Screen.AuthNavGraph.route) {
+                appNavController.navigate(Screen.Login.route) {
+                    popUpTo(Screen.MainNavGraph.route) { inclusive = true }
+                    launchSingleTop = true
+                }
+            }
+        }
+    }
 
     val bottomNavItems = when (mainState.userRole) {
         UserRole.OWNER -> BottomNavItems.OwnerItems
@@ -61,7 +107,18 @@ fun MainScreen(
 
     Scaffold(
         topBar = {
-            PharmaConnectTopAppBar()
+            PharmaConnectTopAppBar(
+                currentUser = mainState.currentUser,
+                onSignInClicked = {
+                    appNavController.navigate(Screen.Login.createRoute(null)) {
+                        popUpTo(Screen.MainNavGraph.route) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+                onSignOutClicked = {
+                    mainViewModel.signOut()
+                }
+            )
         },
         bottomBar = {
             BottomNavigationBar(
@@ -71,12 +128,9 @@ fun MainScreen(
         }
     ) { innerPadding ->
         MainContentNavHost(
-            navController = bottomNavController,
-            innerPadding = innerPadding,
-            onNavigateToRegister = onNavigateToRegister,
-            onNavigateToAdminApplications = onNavigateToAdminApplications,
-            onNavigateToAdminApplicationList = onNavigateToAdminApplicationList,
-            onNavigateToPharmacyDetail = onNavigateToPharmacyDetail
+            mainNavController = appNavController,
+            bottomNavController = bottomNavController,
+            innerPadding = innerPadding
         )
     }
 }
@@ -86,24 +140,23 @@ fun MainScreen(
  */
 @Composable
 fun MainContentNavHost(
-    navController: NavHostController,
-    innerPadding: PaddingValues,
-    onNavigateToRegister: () -> Unit,
-    onNavigateToAdminApplications: (applicationId: String) -> Unit,
-    onNavigateToAdminApplicationList: () -> Unit,
-    onNavigateToPharmacyDetail: (pharmacyId: String) -> Unit
+    mainNavController: NavHostController,
+    bottomNavController: NavHostController,
+    innerPadding: PaddingValues
 ) {
     val startDestination = Screen.Home.route
     
     NavHost(
-        navController = navController,
+        navController = bottomNavController,
         startDestination = startDestination,
         modifier = Modifier.padding(innerPadding)
     ) {
         composable(Screen.Home.route) {
             HomeScreen(
-                onNavigateToRegister = onNavigateToRegister,
-                navController = navController
+                navController = mainNavController,
+                onNavigateToRegister = {
+                    mainNavController.navigate(Screen.Register.route)
+                }
             )
         }
         composable(
@@ -117,18 +170,16 @@ fun MainContentNavHost(
             val query = backStackEntry.arguments?.getString(Screen.Search.ARG_QUERY)
             SearchScreen(
                 initialQuery = query,
-                onNavigateToPharmacyDetail = onNavigateToPharmacyDetail
+                onNavigateToPharmacyDetail = { pharmacyId ->
+                    mainNavController.navigate(Screen.UserPharmacyDetail.createRoute(pharmacyId))
+                }
             )
         }
         composable(Screen.JoinPharmacy.route) { backStackEntry ->
             JoinPharmacyScreen(
-                onNavigateBack = { 
-                    navController.navigate(Screen.Home.route) { popUpTo(Screen.JoinPharmacy.route) { inclusive = true } }
-                },
-                onSubmitSuccess = { 
-                    val joinViewModel: JoinPharmacyViewModel = hiltViewModel(backStackEntry)
-                    joinViewModel.resetSubmissionSuccess() 
-                    navController.navigate(Screen.Home.route) { 
+                onNavigateBack = { bottomNavController.popBackStack() },
+                onSubmitSuccess = {
+                    bottomNavController.navigate(Screen.Home.route) {
                         popUpTo(Screen.Home.route) { inclusive = true }
                     }
                 }
@@ -136,7 +187,7 @@ fun MainContentNavHost(
         }
         composable(Screen.MyPharmacy.route) {
             MyPharmacyScreen(onNavigateToUpdatePharmacy = { pharmacyId ->
-                navController.navigate(Screen.UpdatePharmacy.createRoute(pharmacyId))
+                mainNavController.navigate(Screen.UpdatePharmacy.createRoute(pharmacyId))
             })
         }
         composable(Screen.OwnerAddMedicine.route) { 
@@ -144,7 +195,7 @@ fun MainContentNavHost(
         }
         composable(Screen.OwnerInventory.route) { 
             OwnerInventoryScreen(onNavigateToUpdateItem = { pharmacyId, inventoryItemId ->
-                 navController.navigate(Screen.UpdateInventoryItem.createRoute(pharmacyId, inventoryItemId))
+                 mainNavController.navigate(Screen.UpdateInventoryItem.createRoute(pharmacyId, inventoryItemId))
             })
          }
         composable(
@@ -152,9 +203,9 @@ fun MainContentNavHost(
             arguments = listOf(navArgument("pharmacyId") { type = NavType.StringType })
         ) { backStackEntry ->
             JoinPharmacyScreen(
-                onNavigateBack = { navController.popBackStack() },
+                onNavigateBack = { bottomNavController.popBackStack() },
                 onSubmitSuccess = { 
-                    navController.popBackStack()
+                    bottomNavController.popBackStack()
                 }
             )
         }
@@ -165,21 +216,23 @@ fun MainContentNavHost(
                  navArgument("inventoryItemId") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-             UpdateInventoryItemScreen(onNavigateBack = { navController.popBackStack() })
+             UpdateInventoryItemScreen(onNavigateBack = { bottomNavController.popBackStack() })
          }
         composable(Screen.AdminApplications.route) {
             AdminApplicationScreen(
-                onNavigateToDetail = onNavigateToAdminApplications
+                onNavigateToDetail = { appId ->
+                    mainNavController.navigate(Screen.ApplicationDetail.createRoute(appId))
+                }
             )
         }
         composable(Screen.AdminPharmacies.route) { 
             AdminPharmaciesScreen(onNavigateToPharmacyDetail = { pharmacyId ->
-                navController.navigate(Screen.AdminPharmacyDetail.createRoute(pharmacyId))
+                mainNavController.navigate(Screen.AdminPharmacyDetail.createRoute(pharmacyId))
             })
         }
         composable(Screen.AdminMedicines.route) { 
             AdminMedicinesScreen(onNavigateToUpdateMedicine = { medicineId ->
-                navController.navigate(Screen.AdminUpdateMedicine.createRoute(medicineId))
+                mainNavController.navigate(Screen.AdminUpdateMedicine.createRoute(medicineId))
             })
         }
         composable(Screen.AdminAddMedicine.route) { 
@@ -193,7 +246,7 @@ fun MainContentNavHost(
             val medicineId = backStackEntry.arguments?.getString("medicineId")
             UpdateMedicineScreen(
                 medicineId = medicineId,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { bottomNavController.popBackStack() }
             )
         }
         composable(
@@ -203,10 +256,211 @@ fun MainContentNavHost(
             val pharmacyId = backStackEntry.arguments?.getString("pharmacyId")
             AdminPharmacyDetailScreen(
                 pharmacyId = pharmacyId,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { bottomNavController.popBackStack() }
             )
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
+@Composable
+fun HomeScreen(
+    navController: NavController,
+    onNavigateToRegister: () -> Unit,
+    homeViewModel: HomeViewModel = hiltViewModel()
+) {
+    val scrollState = rememberScrollState()
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val homeState by homeViewModel.state.collectAsState()
+    val context = LocalContext.current
+
+    val requestPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted: Boolean ->
+            if (isGranted) {
+                homeViewModel.onLocationPermissionGranted()
+            } else {
+                homeViewModel.onLocationPermissionDenied(
+                    ActivityCompat.shouldShowRequestPermissionRationale(context as Activity, Manifest.permission.ACCESS_FINE_LOCATION)
+                )
+            }
+        }
+    )
+
+    LaunchedEffect(Unit) {
+        homeViewModel.checkAndRequestLocationPermission()
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Text(
+                text = "Find medicines",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+            var searchQuery by remember { mutableStateOf("") }
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Search for Medicine") },
+                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Search Icon") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = {
+                    if (searchQuery.isNotBlank()) {
+                        navController.navigate(Screen.Search.createRoute(searchQuery))
+                        keyboardController?.hide()
+                    }
+                })
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+
+        if (homeState.showLocationPermissionRationale) {
+            AlertDialog(
+                onDismissRequest = { homeViewModel.userNotifiedAboutRationale() },
+                title = { Text("Location Permission Required") },
+                text = { Text("This app uses your location to show nearby pharmacies. Please grant the permission for the best experience.") },
+                confirmButton = {
+                    Button(onClick = {
+                        homeViewModel.userNotifiedAboutRationale()
+                        requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                    }) { Text("Grant") }
+                },
+                dismissButton = {
+                    Button(onClick = { homeViewModel.userNotifiedAboutRationale() }) { Text("Later") }
+                }
+            )
+        }
+        if (!homeState.locationPermissionGranted && !homeState.locationPermissionRequested && !homeState.showLocationPermissionRationale) {
+            Column(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Enable location to see pharmacies near you.", textAlign = TextAlign.Center, modifier = Modifier.padding(bottom=8.dp))
+                Button(onClick = {
+                    homeViewModel.permissionRequestAttempted()
+                    requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                }) {
+                    Text("Enable Location")
+                }
+            }
+        }
+
+        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+            Text(
+                text = "Nearby pharmacies",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
+            when {
+                homeState.isLoading && homeState.nearbyPharmacies.isEmpty() -> {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally).padding(16.dp))
+                }
+                homeState.error != null -> {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                        Icon(Icons.Filled.Warning, contentDescription = "Error", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(32.dp))
+                        Text(homeState.error!!, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center, modifier = Modifier.padding(top=8.dp, bottom = 8.dp))
+                        Button(onClick = { homeViewModel.checkAndRequestLocationPermission() }) {
+                            Text("Retry")
+                        }
+                    }
+                }
+                !homeState.locationPermissionGranted && homeState.locationPermissionRequested -> {
+                     Text(
+                         "Location permission is denied. Please enable it in app settings to see nearby pharmacies.", 
+                         modifier = Modifier.padding(16.dp), 
+                         textAlign = TextAlign.Center
+                    )
+                }
+                homeState.nearbyPharmacies.isNotEmpty() -> {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        items(homeState.nearbyPharmacies) { pharmacy ->
+                            NearbyPharmacyCard(pharmacy = pharmacy)
+                        }
+                    }
+                }
+                homeState.locationPermissionGranted && homeState.userLocation != null && homeState.nearbyPharmacies.isEmpty() && !homeState.isLoading -> {
+                    Text("No nearby pharmacies found.", modifier = Modifier.padding(16.dp), textAlign = TextAlign.Center)
+                }
+                homeState.locationPermissionGranted && homeState.userLocation == null && !homeState.isLoading -> {
+                     Text("Trying to get your location... Ensure GPS is enabled.", modifier = Modifier.padding(16.dp), textAlign = TextAlign.Center)
+                }
+                 else -> {
+                     if (!homeState.locationPermissionGranted && !homeState.locationPermissionRequested) {
+                         // This case is handled by the "Enable Location" button above
+                     } else if (!homeState.locationPermissionGranted) {
+                         // Already requested, but denied, message above covers it.
+                     } else {
+                        Text("Finding pharmacies near you...", modifier = Modifier.padding(16.dp), textAlign = TextAlign.Center)
+                     }
+                 }
+            }
+        }
+        Spacer(modifier = Modifier.height(32.dp))
+    }
+}
+
+@Composable
+fun NearbyPharmacyCard(pharmacy: Pharmacy) {
+    Card(
+        modifier = Modifier.size(width = 180.dp, height = 160.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            AsyncImage(
+                model = pharmacy.image ?: R.drawable.logo_trans,
+                contentDescription = pharmacy.name,
+                placeholder = painterResource(id = R.drawable.logo_trans),
+                error = painterResource(id = R.drawable.logo_trans),
+                modifier = Modifier
+                    .height(80.dp)
+                    .fillMaxWidth(),
+                contentScale = ContentScale.Fit
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = pharmacy.name,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center,
+                maxLines = 2
+            )
+            pharmacy.distance?.let {
+                Text(
+                    text = "%.1f km".format(it),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun HomeScreenPreview() {
+    HomeScreen(
+        onNavigateToRegister = {},
+        navController = rememberNavController()
+    )
 }
 
 // Simple placeholder for screens not yet built

@@ -2,6 +2,7 @@ package com.example.pharma_connect_androids.ui.features.main
 
 import androidx.lifecycle.ViewModel
 import com.example.pharma_connect_androids.data.local.SessionManager
+import com.example.pharma_connect_androids.domain.model.UserData
 import com.example.pharma_connect_androids.domain.model.UserRole
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,7 +16,8 @@ import javax.inject.Inject
 // enum class UserRole { USER, OWNER, ADMIN, UNKNOWN }
 
 data class MainScreenState(
-    val userRole: UserRole = UserRole.UNKNOWN // Default to unknown
+    val userRole: UserRole = UserRole.UNKNOWN,
+    val currentUser: UserData? = null // Added current user
 )
 
 @HiltViewModel
@@ -27,18 +29,30 @@ class MainViewModel @Inject constructor(
     val state: StateFlow<MainScreenState> = _state.asStateFlow()
 
     init {
-        loadUserRole()
+        loadUserDetails()
     }
 
-    private fun loadUserRole() {
+    private fun loadUserDetails() {
         val userData = sessionManager.getUserData()
         val role = when (userData?.role?.lowercase()) {
             "owner" -> UserRole.OWNER
             "admin" -> UserRole.ADMIN
             "user" -> UserRole.USER
-            "pharmacist" -> UserRole.PHARMACIST // Added pharmacist case
+            "pharmacist" -> UserRole.PHARMACIST
             else -> UserRole.UNKNOWN
         }
-        _state.value = _state.value.copy(userRole = role)
+        _state.value = MainScreenState(userRole = role, currentUser = userData)
+    }
+
+    fun signOut() {
+        sessionManager.clearSession()
+        // Update state to reflect logged out status
+        _state.value = MainScreenState(userRole = UserRole.UNKNOWN, currentUser = null)
+        // Optionally, could also emit an event to trigger navigation if preferred
+    }
+
+    // Call this if there's a chance session data changes elsewhere and UI needs to refresh
+    fun refreshUserDetails() {
+        loadUserDetails()
     }
 } 
