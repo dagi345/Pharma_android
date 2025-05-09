@@ -24,13 +24,21 @@ import com.example.pharma_connect_androids.R // Assuming you have placeholder im
 import com.example.pharma_connect_androids.ui.theme.PharmaConnectAndroidSTheme
 import androidx.navigation.NavController
 import com.example.pharma_connect_androids.ui.navigation.Screen // Ensure Screen is imported
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.navigation.compose.rememberNavController
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 @Composable
 fun HomeScreen(
-    onNavigateToRegister: () -> Unit
+    onNavigateToRegister: () -> Unit,
+    navController: NavController
 ) {
     val scrollState = rememberScrollState()
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     Column(
         modifier = Modifier
@@ -58,7 +66,20 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = { Text("Search for Medicine") },
                 leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Search Icon") },
-                singleLine = true
+                singleLine = true,
+                keyboardOptions = KeyboardOptions.Default.copy(
+                    imeAction = ImeAction.Search
+                ),
+                keyboardActions = KeyboardActions(
+                    onSearch = {
+                        if (searchQuery.isNotBlank()) {
+                            navController.navigate(Screen.Search.createRoute(searchQuery)) {
+                                // Optional: Configure navigation options, e.g., launchSingleTop = true
+                            }
+                            keyboardController?.hide() // Hide keyboard after search
+                        }
+                    }
+                )
             )
             Spacer(modifier = Modifier.height(16.dp))
             Row {
@@ -176,7 +197,8 @@ fun PharmacyPlaceholderCard() {
 fun HomeScreenPreview() {
     PharmaConnectAndroidSTheme {
         HomeScreen(
-            onNavigateToRegister = {}
+            onNavigateToRegister = {},
+            navController = rememberNavController() // For preview purposes
         )
     }
 } 

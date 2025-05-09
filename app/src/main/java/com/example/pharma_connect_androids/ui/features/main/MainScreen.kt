@@ -99,11 +99,22 @@ fun MainContentNavHost(
     ) {
         composable(Screen.Home.route) {
             HomeScreen(
-                onNavigateToRegister = onNavigateToRegister
+                onNavigateToRegister = onNavigateToRegister,
+                navController = navController
             )
         }
-        composable(Screen.Search.route) {
-            SearchScreen()
+        composable(
+            route = Screen.Search.route,
+            arguments = listOf(navArgument(Screen.Search.ARG_QUERY) { 
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+            })
+        ) { backStackEntry ->
+            val query = backStackEntry.arguments?.getString(Screen.Search.ARG_QUERY)
+            SearchScreen(
+                initialQuery = query
+            )
         }
         composable(Screen.JoinPharmacy.route) { backStackEntry ->
             JoinPharmacyScreen(

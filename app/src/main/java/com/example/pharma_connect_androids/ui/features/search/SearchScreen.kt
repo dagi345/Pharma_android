@@ -1,5 +1,11 @@
 package com.example.pharma_connect_androids.ui.features.search
 
+import android.Manifest // Required for ACCESS_FINE_LOCATION
+import android.content.Context
+import android.content.pm.PackageManager
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -8,29 +14,87 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext // Required for FusedLocationProviderClient
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat // Required for checkSelfPermission
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
 import com.example.pharma_connect_androids.R // For placeholder image
 import com.example.pharma_connect_androids.data.models.SearchResultItem
 import com.example.pharma_connect_androids.ui.theme.PharmaConnectAndroidSTheme
+import com.google.android.gms.location.LocationServices // Required for FusedLocationProviderClient
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
-    viewModel: SearchViewModel = hiltViewModel()
+    viewModel: SearchViewModel = hiltViewModel(),
+    initialQuery: String? = null
 ) {
     val state by viewModel.state.collectAsState()
+    val context = LocalContext.current
+    val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
+
+    val requestPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted: Boolean ->
+            if (isGranted) {
+                viewModel.onLocationPermissionGranted()
+                fetchLastLocation(context, fusedLocationClient, viewModel)
+            } else {
+                // viewModel.onLocationPermissionDenied(shouldShowRationale) // We need to figure out shouldShowRationale - for now, just basic denial
+                // For simplicity, just log for now. A real app would use ActivityCompat.shouldShowRequestPermissionRationale
+                Log.d("SearchScreen", "Location permission denied by user.")
+                viewModel.onLocationPermissionDenied(false) // Assuming no rationale to show yet by default
+            }
+        }
+    )
+
+    LaunchedEffect(initialQuery) {
+        if (!initialQuery.isNullOrBlank()) {
+            viewModel.setInitialSearchQuery(initialQuery)
+        }
+    }
+    
+    // Attempt to get location if permission is already granted when screen loads or when results are available
+    LaunchedEffect(state.searchResults) { // Re-check if permission granted when results change
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            viewModel.onLocationPermissionGranted() // Ensure state is updated
+            fetchLastLocation(context, fusedLocationClient, viewModel)
+        }
+    }
+
+    if (state.showLocationPermissionRationale) {
+        AlertDialog(
+            onDismissRequest = { viewModel.userNotifiedAboutRationale() },
+            title = { Text("Location Permission Needed") },
+            text = { Text("This app needs location permission to show distances to pharmacies. Please grant the permission.") },
+            confirmButton = {
+                Button(onClick = { 
+                    viewModel.userNotifiedAboutRationale()
+                    requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                }) {
+                    Text("Grant Permission")
+                }
+            },
+            dismissButton = {
+                Button(onClick = { viewModel.userNotifiedAboutRationale() }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -82,21 +146,22 @@ fun SearchScreen(
                 },
                  modifier = Modifier.weight(1f)
             )
-
-            // Near Me Checkbox
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(start = 8.dp) // Add some padding
-            ) {
-                Checkbox(
-                    checked = state.isNearMeChecked,
-                    onCheckedChange = { viewModel.onNearMeToggled(it) }
-                )
-                Text("Near Me")
-            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+
+        // Location Permission Prompt if not yet requested and not granted
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+            !state.locationPermissionRequested) {
+            Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                Row(modifier = Modifier.padding(16.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Show distance to pharmacies?", style = MaterialTheme.typography.bodyMedium)
+                    Button(onClick = { requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION) }) {
+                        Text("Enable Location")
+                    }
+                }
+            }
+        }
 
         // Results Area
         when {
@@ -110,9 +175,15 @@ fun SearchScreen(
                  // Show error message
                  Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                      Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Filled.Warning, contentDescription = null, tint = Color.Red, modifier = Modifier.size(48.dp))
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(state.searchError ?: "An error occurred", textAlign = TextAlign.Center)
+                        if (state.searchError?.startsWith(SearchViewModel.NO_MEDICINE_FOUND_MSG_PREFIX) == true) {
+                            Icon(Icons.Filled.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(48.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(state.searchError!!, textAlign = TextAlign.Center)
+                        } else {
+                            Icon(Icons.Filled.Warning, contentDescription = null, tint = Color.Red, modifier = Modifier.size(48.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(state.searchError ?: "An error occurred", textAlign = TextAlign.Center)
+                        }
                      }
                  }
              }
@@ -135,14 +206,32 @@ fun SearchScreen(
                      }
                  }
              }
-             state.searchQuery.isNotBlank() && !state.isLoading -> {
-                 // Show "No results found" specifically after a search completes
-                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                     Text("No results found for \"${state.searchQuery}\"")
-                 }
-             }
-            // Implicitly, if query is blank and not loading/error, show nothing or maybe suggestions
         }
+    }
+}
+
+private fun fetchLastLocation(
+    context: Context,
+    fusedLocationClient: com.google.android.gms.location.FusedLocationProviderClient,
+    viewModel: SearchViewModel
+) {
+    if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+        fusedLocationClient.lastLocation
+            .addOnSuccessListener { location: android.location.Location? ->
+                location?.let {
+                    viewModel.setUserLocation(it)
+                    Log.d("SearchScreen", "Location fetched: Lat=${it.latitude}, Lon=${it.longitude}")
+                } ?: run {
+                    Log.d("SearchScreen", "Last location is null. Consider requesting location updates.")
+                    // TODO: Implement requestLocationUpdates if lastLocation is often null
+                }
+            }
+            .addOnFailureListener {
+                Log.e("SearchScreen", "Failed to get location.", it)
+                // Potentially update state to show location fetch error
+            }
+    } else {
+        Log.d("SearchScreen", "Location permission not granted at time of fetch call.")
     }
 }
 
@@ -196,10 +285,11 @@ fun SearchResultItemCard(item: SearchResultItem) {
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(modifier = Modifier.height(IntrinsicSize.Min)) { // Make row height based on content
-            // Image Placeholder
-            Image(
-                painter = painterResource(id = R.drawable.logo), // Use logo as placeholder
+            AsyncImage(
+                model = item.photo,
                 contentDescription = "Pharmacy Image",
+                placeholder = painterResource(id = R.drawable.logo),
+                error = painterResource(id = R.drawable.logo),
                 modifier = Modifier
                     .weight(0.4f) // Image takes ~40% width
                     .aspectRatio(1f) // Make image square
@@ -258,6 +348,9 @@ fun SearchScreenPreview_Results() {
                      pharmacyName = "Preview Pharmacy ${index + 1}",
                      address = "12${index} Preview St",
                      price = 10.50 + index,
+                     quantity = (index + 1) * 5,
+                     latitude = null,
+                     longitude = null,
                      distance = (index+1)*0.5,
                      time = (index+1)*2.0,
                      photo = null,
@@ -276,7 +369,6 @@ fun SearchScreenPreview_Results() {
              Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                  Button(onClick = {}) { Text("Price Range") }
                  Button(onClick = {}) { Text("Location") }
-                 Button(onClick = {}) { Text("Near Me") }
              }
              Spacer(modifier = Modifier.height(16.dp))
              LazyColumn(
@@ -299,8 +391,12 @@ fun SearchScreenPreview_NoResults() {
     PharmaConnectAndroidSTheme {
         // Simulate state with no results
          Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-             Text("No results found for \"NonExistentMedicine\"")
-         }
+             Column(horizontalAlignment = Alignment.CenterHorizontally){
+                Icon(Icons.Filled.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(48.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("${SearchViewModel.NO_MEDICINE_FOUND_MSG_PREFIX}'NonExistentMedicine'")
+             }         
+        }
     }
 }
 

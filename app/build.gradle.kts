@@ -76,6 +76,7 @@ dependencies {
 
     implementation(libs.hilt.android)
     implementation(libs.androidx.runtime.livedata)
+    implementation(libs.play.services.location)
     kapt(libs.hilt.compiler)
 
     testImplementation(libs.junit)

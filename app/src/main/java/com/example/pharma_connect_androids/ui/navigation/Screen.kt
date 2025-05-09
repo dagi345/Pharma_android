@@ -14,7 +14,16 @@ sealed class Screen(val route: String) {
 
     // Main Application Flow (Add more as needed)
     object Home : Screen("home_screen") // Example main screen after login
-    object Search : Screen("search_screen") // Added for Bottom Nav
+    object Search : Screen("search_screen?query={query}") { // Modified for argument
+        fun createRoute(query: String?): String {
+            return if (!query.isNullOrBlank()) {
+                "search_screen?query=$query"
+            } else {
+                "search_screen"
+            }
+        }
+        const val ARG_QUERY = "query" // Argument name
+    }
     object Profile : Screen("profile_screen") // Added for Bottom Nav
     object JoinPharmacy : Screen("join_pharmacy_screen") // Added Join Pharmacy route
     object AdminApplications : Screen("admin_applications_screen") // Added Admin route

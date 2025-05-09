@@ -1,5 +1,6 @@
 package com.example.pharma_connect_androids.ui.features.search
 
+import android.location.Location
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -9,7 +10,6 @@ import com.example.pharma_connect_androids.data.repository.SearchRepository
 import com.example.pharma_connect_androids.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,11 +27,13 @@ data class SearchScreenState(
     val searchQuery: String = "",
     val isLoading: Boolean = false,
     val searchError: String? = null,
-    val searchResults: List<SearchResultItem> = emptyList(),
+    var searchResults: List<SearchResultItem> = emptyList(), // Made var to allow direct update after distance calc
     // Filter States
     val selectedPriceRange: PriceRange? = null,
     val selectedLocation: String? = null,
-    val isNearMeChecked: Boolean = false
+    val currentUserLocation: Location? = null, // User's current location
+    val locationPermissionRequested: Boolean = false, // To track if we've asked for permission at least once
+    val showLocationPermissionRationale: Boolean = false // To show rationale dialog if needed
 )
 
 // Predefined filter options
@@ -63,6 +65,13 @@ class SearchViewModel @Inject constructor(
 
     private val _searchQueryFlow = MutableStateFlow("")
 
+    // To store raw results from API before filtering
+    private var rawSearchResults: List<SearchResultItem> = emptyList()
+
+    companion object {
+        const val NO_MEDICINE_FOUND_MSG_PREFIX = "No medicine found for: "
+    }
+
     init {
         _searchQueryFlow
             .debounce(500)
@@ -70,15 +79,27 @@ class SearchViewModel @Inject constructor(
                 if (query.isNotBlank()) {
                     performSearch(query)
                 } else {
-                    _state.value = _state.value.copy(searchResults = emptyList(), searchError = null)
+                    rawSearchResults = emptyList()
+                    _state.value = _state.value.copy(searchResults = emptyList(), searchError = null, isLoading = false)
                 }
             }
             .launchIn(viewModelScope)
     }
 
+    fun setInitialSearchQuery(query: String) {
+        _state.value = _state.value.copy(searchQuery = query, searchResults = emptyList(), searchError = null, isLoading = true)
+        _searchQueryFlow.value = query
+    }
+
     fun onSearchQueryChange(query: String) {
         _state.value = _state.value.copy(searchQuery = query)
-        _searchQueryFlow.value = query
+        if (query.isBlank()) {
+            rawSearchResults = emptyList()
+            _state.value = _state.value.copy(searchResults = emptyList(), searchError = null, isLoading = false)
+            _searchQueryFlow.value = "" 
+        } else {
+            _searchQueryFlow.value = query
+        }
     }
 
     fun triggerSearchNow() {
@@ -87,73 +108,127 @@ class SearchViewModel @Inject constructor(
         }
     }
 
+    // --- Location Permission and Data Callbacks ---
+    fun onLocationPermissionGranted() {
+        // UI will call this, then UI will fetch location and call setUserLocation
+        _state.value = _state.value.copy(locationPermissionRequested = true, showLocationPermissionRationale = false)
+        // Actual fetching will be triggered from UI, which then calls setUserLocation
+    }
+
+    fun onLocationPermissionDenied(shouldShowRationale: Boolean) {
+        _state.value = _state.value.copy(
+            locationPermissionRequested = true, // User has responded to request
+            showLocationPermissionRationale = shouldShowRationale
+        )
+    }
+
+    fun setUserLocation(location: Location) {
+        _state.value = _state.value.copy(currentUserLocation = location)
+        updateSearchResultsWithDistances() // Recalculate distances with new location
+    }
+    
+    fun userNotifiedAboutRationale(){
+        _state.value = _state.value.copy(showLocationPermissionRationale = false)
+    }
+
     // --- Filter Handlers --- 
     fun onPriceRangeSelected(range: PriceRange?) {
         val actualRange = if (range == (0.0 to null)) null else range // Treat "Any Price" as null filter
         Log.d("SearchViewModel", "Price Range Selected: $actualRange")
         _state.value = _state.value.copy(selectedPriceRange = actualRange)
-        // TODO: Trigger re-filtering of results based on current filters
-        // For now, just update state. We can optionally refilter placeholder data:
-         _state.value = _state.value.copy(searchResults = filterPlaceholderResults(_state.value))
+        updateSearchResultsWithDistances() // Apply filters and potentially update distances
     }
 
     fun onLocationSelected(location: String?) {
         val actualLocation = if (location == "Any Location") null else location // Treat "Any Location" as null filter
         Log.d("SearchViewModel", "Location Selected: $actualLocation")
         _state.value = _state.value.copy(selectedLocation = actualLocation)
-        // TODO: Trigger re-filtering of results based on current filters
-        _state.value = _state.value.copy(searchResults = filterPlaceholderResults(_state.value))
+        updateSearchResultsWithDistances() // Apply filters and potentially update distances
     }
-
-    fun onNearMeToggled(isChecked: Boolean) {
-        Log.d("SearchViewModel", "Near Me Toggled: $isChecked")
-        _state.value = _state.value.copy(isNearMeChecked = isChecked)
-        // TODO: Trigger re-filtering of results based on current filters
-         _state.value = _state.value.copy(searchResults = filterPlaceholderResults(_state.value))
-    }
-    // --- End Filter Handlers --- 
 
     private fun performSearch(query: String) {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, searchError = null)
-            delay(1000) // Simulate network call
-
-            // Simulate results and apply initial filters
-            val initialResults = createPlaceholderResults(query)
-            _state.value = _state.value.copy(
-                isLoading = false,
-                searchResults = filterPlaceholderResults(_state.value.copy(searchResults = initialResults)), // Apply current filters to new results
-                searchError = null
-            )
-            // Real repository call would go here later
+            
+            searchRepository.searchMedicine(SearchRequest(medicineName = query))
+                .collect { resource ->
+                    when (resource) {
+                        is Resource.Loading -> {
+                            _state.value = _state.value.copy(isLoading = true)
+                        }
+                        is Resource.Success -> {
+                            rawSearchResults = resource.data?.data ?: emptyList()
+                            if (rawSearchResults.isEmpty() && query.isNotBlank()) {
+                                _state.value = _state.value.copy(
+                                    isLoading = false,
+                                    searchResults = emptyList(),
+                                    searchError = "$NO_MEDICINE_FOUND_MSG_PREFIX'$query'"
+                                )
+                            } else {
+                                // Update state with possibly distance-updated results
+                                updateSearchResultsWithDistances() 
+                            }
+                        }
+                        is Resource.Error -> {
+                            rawSearchResults = emptyList()
+                            _state.value = _state.value.copy(
+                                isLoading = false,
+                                searchError = resource.message ?: "An unknown error occurred",
+                                searchResults = emptyList()
+                            )
+                        }
+                    }
+                }
         }
     }
 
-    // Helper function to create placeholder search results
-    private fun createPlaceholderResults(query: String): List<SearchResultItem> {
-         if (query.contains("not found", ignoreCase = true)) return emptyList()
-         
-         return List(10) { index -> // Generate more items for filtering demo
-             val locationIndex = index % locations.filter { it != "Any Location" }.size // Cycle through locations
-             val location = locations.filter { it != "Any Location" }[locationIndex]
-             SearchResultItem(
-                 pharmacyName = "$location Pharmacy ${index % 3 + 1}",
-                 address = "${100 + index * 10} $location St, Addis Ababa",
-                 price = (10.0 + index * 23.5) % 250, // Prices up to 250
-                 distance = (index + 1) * 1.5, // Distance up to 15km
-                 time = (index + 1) * 3.0,
-                 photo = null,
-                 pharmacyId = "pharmacy_${location}_${index + 1}",
-                 inventoryId = "inventory_${query}_${index + 1}"
-             )
-         }
-     }
+    private fun updateSearchResultsWithDistances() {
+        val currentRawResults = rawSearchResults
+        val userLocation = _state.value.currentUserLocation
 
-    // Helper function to simulate filtering on the placeholder data
-    private fun filterPlaceholderResults(currentState: SearchScreenState): List<SearchResultItem> {
-        val originalResults = createPlaceholderResults(currentState.searchQuery) // Re-generate base list
-        
-        return originalResults.filter { item ->
+        Log.d("SearchViewModel", "Updating distances. User location: ${userLocation?.latitude}, ${userLocation?.longitude}")
+        Log.d("SearchViewModel", "Raw results count: ${currentRawResults.size}")
+
+        val processedResults = currentRawResults.map { item ->
+            val pharmacyLat = item.latitude
+            val pharmacyLon = item.longitude
+            var calculatedDistance: Double? = null
+
+            if (userLocation != null && pharmacyLat != null && pharmacyLon != null) {
+                val pharmacyLocation = Location("").apply {
+                    latitude = pharmacyLat
+                    longitude = pharmacyLon
+                }
+                calculatedDistance = userLocation.distanceTo(pharmacyLocation) / 1000.0 // Convert meters to KM
+                Log.d("SearchViewModel", "Item: ${item.pharmacyName}, PharmLat: $pharmacyLat, PharmLon: $pharmacyLon, Dist: $calculatedDistance km")
+            } else {
+                Log.d("SearchViewModel", "Item: ${item.pharmacyName}, Missing location data. UserLoc: $userLocation, PharmLat: $pharmacyLat, PharmLon: $pharmacyLon")
+            }
+            
+            item.copy(
+                distance = calculatedDistance
+                // Time calculation could be added here
+            )
+        }
+        // Apply other client-side filters (price, location name) after distances are potentially added
+        val filteredResults = applyClientSideFilters(processedResults)       
+        _state.value = _state.value.copy(
+            searchResults = filteredResults,
+            isLoading = false, // Ensure loading is false after processing
+            searchError = if (filteredResults.isEmpty() && rawSearchResults.isNotEmpty() && _state.value.searchQuery.isNotBlank()) {
+                                // This case means filters made it empty, not that the medicine wasn't found
+                                _state.value.searchError // Keep existing error or null
+                          } else if (rawSearchResults.isEmpty() && _state.value.searchQuery.isNotBlank()){
+                                "$NO_MEDICINE_FOUND_MSG_PREFIX'${_state.value.searchQuery}'"
+                          } else {
+                                null
+                          }
+            )
+    }
+
+    private fun applyClientSideFilters(resultsToFilter: List<SearchResultItem>): List<SearchResultItem> {
+        val currentState = _state.value
+        return resultsToFilter.filter { item ->
             val priceMatch = currentState.selectedPriceRange?.let { range ->
                 val lowerBound = range.first
                 val upperBound = range.second
@@ -164,11 +239,9 @@ class SearchViewModel @Inject constructor(
                  item.address.contains(it, ignoreCase = true)
              } ?: true // If null location, always true
 
-            val nearMeMatch = if (currentState.isNearMeChecked) {
-                 item.distance != null && item.distance <= 5.0 // Example: Near Me means <= 5km
-             } else true // If not checked, always true
-
-            priceMatch && locationMatch && nearMeMatch
+            priceMatch && locationMatch
         }
     }
-} 
+
+    // Placeholder functions are now removed.
+}
