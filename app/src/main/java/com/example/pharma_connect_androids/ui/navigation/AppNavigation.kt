@@ -24,6 +24,8 @@ import com.example.pharma_connect_androids.ui.features.admin.ApplicationDetailSc
 import com.example.pharma_connect_androids.ui.features.admin.AdminApplicationViewModel
 import com.example.pharma_connect_androids.ui.features.pharmacy.PharmacistListScreen
 import com.example.pharma_connect_androids.ui.features.auth.register.PharmacistRegisterScreen
+import com.example.pharma_connect_androids.ui.features.search.SearchScreen
+import com.example.pharma_connect_androids.ui.features.pharmacy.UserPharmacyDetailScreen
 
 /**
  * Defines the overall navigation structure, including Auth and Main flows.
@@ -110,6 +112,9 @@ fun AppNavigation(navController: NavHostController) {
                 },
                 onNavigateToAdminApplicationList = { 
                     navController.navigate(Screen.AdminApplications.route)
+                },
+                onNavigateToPharmacyDetail = { pharmacyId ->
+                    navController.navigate(Screen.UserPharmacyDetail.createRoute(pharmacyId))
                 }
             )
         }
@@ -133,6 +138,23 @@ fun AppNavigation(navController: NavHostController) {
         ) { backStackEntry ->
             // ViewModel will get pharmacyId from SavedStateHandle
             PharmacistListScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.Search.route) {
+            SearchScreen(
+                onNavigateToPharmacyDetail = {
+                    navController.navigate(Screen.UserPharmacyDetail.createRoute(it))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.UserPharmacyDetail.route,
+            arguments = listOf(navArgument(Screen.UserPharmacyDetail.ARG_PHARMACY_ID) { type = NavType.StringType })
+        ) { backStackEntry ->
+            UserPharmacyDetailScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         }

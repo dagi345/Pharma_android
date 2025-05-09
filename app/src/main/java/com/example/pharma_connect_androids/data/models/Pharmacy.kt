@@ -32,6 +32,7 @@ data class Pharmacy(
     @SerialName("googleMapsLink") // <<< Re-add the missing field
     val googleMapsLink: String? = null
 ) {
+    val contact: String? = null
     val pharmacyImage: String?=null
 }
 

@@ -40,7 +40,8 @@ import java.util.Locale
 @Composable
 fun SearchScreen(
     viewModel: SearchViewModel = hiltViewModel(),
-    initialQuery: String? = null
+    initialQuery: String? = null,
+    onNavigateToPharmacyDetail: (pharmacyId: String) -> Unit
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
@@ -128,7 +129,7 @@ fun SearchScreen(
             FilterDropdown(
                 label = "Price",
                 options = priceRanges.map { it.first }, // Display names
-                selectedOption = priceRanges.find { it.second == state.selectedPriceRange }?.first ?: "Any Price",
+                selectedOption = priceRanges.find { it.second == state.selectedPriceRange }?.first ?: "All",
                 onOptionSelected = { selectedLabel ->
                     val selectedRangePair = priceRanges.find { it.first == selectedLabel }?.second
                     viewModel.onPriceRangeSelected(selectedRangePair)
@@ -140,7 +141,7 @@ fun SearchScreen(
             FilterDropdown(
                 label = "Location",
                 options = locations,
-                selectedOption = state.selectedLocation ?: "Any Location",
+                selectedOption = state.selectedLocation ?: "All",
                 onOptionSelected = { selectedLocation ->
                     viewModel.onLocationSelected(selectedLocation)
                 },
@@ -202,7 +203,12 @@ fun SearchScreen(
                          )
                      }
                      items(state.searchResults) { resultItem ->
-                         SearchResultItemCard(item = resultItem)
+                         SearchResultItemCard(
+                             item = resultItem,
+                             onViewDetailClick = {
+                                 onNavigateToPharmacyDetail(resultItem.pharmacyId)
+                             }
+                         )
                      }
                  }
              }
@@ -279,7 +285,10 @@ fun FilterDropdown(
 
 // Composable for displaying a single search result item
 @Composable
-fun SearchResultItemCard(item: SearchResultItem) {
+fun SearchResultItemCard(
+    item: SearchResultItem,
+    onViewDetailClick: () -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -327,7 +336,7 @@ fun SearchResultItemCard(item: SearchResultItem) {
                 Text("Br ${String.format(Locale.US, "%.2f", item.price)}", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
 
                 // Button / Link Placeholder
-                TextButton(onClick = { /* TODO: Navigate to Pharmacy Detail */ }) {
+                TextButton(onClick = { onViewDetailClick() }) {
                     Text("See pharmacy detail")
                 }
             }
@@ -378,7 +387,7 @@ fun SearchScreenPreview_Results() {
             ) {
                  item { Text("Results for: ${previewState.searchQuery}", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 8.dp)) }
                  items(previewState.searchResults) { resultItem ->
-                    SearchResultItemCard(item = resultItem)
+                    SearchResultItemCard(item = resultItem, onViewDetailClick = {})
                 }
              }
          }

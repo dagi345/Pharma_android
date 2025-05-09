@@ -83,6 +83,11 @@ sealed class Screen(val route: String) {
         const val ARG_PHARMACY_ID = "pharmacyId"
     }
 
+    object UserPharmacyDetail : Screen("user_pharmacy_detail/{pharmacyId}") {
+        fun createRoute(pharmacyId: String) = "user_pharmacy_detail/$pharmacyId"
+        const val ARG_PHARMACY_ID = "pharmacyId"
+    }
+
     // Helper function to append arguments (example, might need adjustment)
     fun withArgs(vararg args: String): String {
         return buildString {

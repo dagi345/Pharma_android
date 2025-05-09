@@ -45,7 +45,8 @@ fun MainScreen(
     viewModel: MainViewModel = hiltViewModel(),
     onNavigateToRegister: () -> Unit,
     onNavigateToAdminApplications: (applicationId: String) -> Unit,
-    onNavigateToAdminApplicationList: () -> Unit
+    onNavigateToAdminApplicationList: () -> Unit,
+    onNavigateToPharmacyDetail: (pharmacyId: String) -> Unit
 ) {
     val bottomNavController = rememberNavController()
     val mainState by viewModel.state.collectAsState()
@@ -74,7 +75,8 @@ fun MainScreen(
             innerPadding = innerPadding,
             onNavigateToRegister = onNavigateToRegister,
             onNavigateToAdminApplications = onNavigateToAdminApplications,
-            onNavigateToAdminApplicationList = onNavigateToAdminApplicationList
+            onNavigateToAdminApplicationList = onNavigateToAdminApplicationList,
+            onNavigateToPharmacyDetail = onNavigateToPharmacyDetail
         )
     }
 }
@@ -88,7 +90,8 @@ fun MainContentNavHost(
     innerPadding: PaddingValues,
     onNavigateToRegister: () -> Unit,
     onNavigateToAdminApplications: (applicationId: String) -> Unit,
-    onNavigateToAdminApplicationList: () -> Unit
+    onNavigateToAdminApplicationList: () -> Unit,
+    onNavigateToPharmacyDetail: (pharmacyId: String) -> Unit
 ) {
     val startDestination = Screen.Home.route
     
@@ -113,7 +116,8 @@ fun MainContentNavHost(
         ) { backStackEntry ->
             val query = backStackEntry.arguments?.getString(Screen.Search.ARG_QUERY)
             SearchScreen(
-                initialQuery = query
+                initialQuery = query,
+                onNavigateToPharmacyDetail = onNavigateToPharmacyDetail
             )
         }
         composable(Screen.JoinPharmacy.route) { backStackEntry ->
