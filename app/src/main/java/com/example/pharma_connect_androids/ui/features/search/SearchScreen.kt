@@ -63,8 +63,14 @@ fun SearchScreen(
     )
 
     LaunchedEffect(initialQuery) {
+        Log.d("SearchScreen", "LaunchedEffect triggered. initialQuery: $initialQuery")
         if (!initialQuery.isNullOrBlank()) {
             viewModel.setInitialSearchQuery(initialQuery)
+        } else {
+            // Optional: Clear search if navigating to search tab with no query
+            // This depends on whether SearchViewModel's init already clears or if _searchQueryFlow handles it.
+            // For now, if initialQuery is blank, we do nothing here, assuming default state is fine.
+            // viewModel.onSearchQueryChange("") // Could be one way to clear
         }
     }
     

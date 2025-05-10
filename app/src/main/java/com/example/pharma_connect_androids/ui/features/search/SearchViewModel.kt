@@ -10,6 +10,7 @@ import com.example.pharma_connect_androids.data.repository.SearchRepository
 import com.example.pharma_connect_androids.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -63,48 +64,153 @@ class SearchViewModel @Inject constructor(
     private val _state = MutableStateFlow(SearchScreenState())
     val state: StateFlow<SearchScreenState> = _state.asStateFlow()
 
-    private val _searchQueryFlow = MutableStateFlow("")
+    private val _typedQueryFlow = MutableStateFlow("") // Renamed from _searchQueryFlow
 
     // To store raw results from API before filtering
     private var rawSearchResults: List<SearchResultItem> = emptyList()
+    private var currentSearchJob: Job? = null // To keep track of ongoing search
 
     companion object {
         const val NO_MEDICINE_FOUND_MSG_PREFIX = "No medicine found for: "
     }
 
     init {
-        _searchQueryFlow
+        _typedQueryFlow // Changed from _searchQueryFlow
             .debounce(500)
-            .onEach { query ->
-                if (query.isNotBlank()) {
-                    performSearch(query)
+            .onEach { typedQuery -> // query from the text field input after debounce
+                Log.d("SearchViewModel", "Debounced typed query: $typedQuery. Current state query: ${_state.value.searchQuery}")
+                // Only proceed if this debounced query matches the *current* query in the state.
+                if (typedQuery.isNotBlank() && typedQuery == _state.value.searchQuery) {
+                    performSearch(typedQuery, isDebouncedSearch = true)
+                } else if (typedQuery.isBlank() && typedQuery == _state.value.searchQuery) {
+                    clearSearchResultsAndError()
                 } else {
-                    rawSearchResults = emptyList()
-                    _state.value = _state.value.copy(searchResults = emptyList(), searchError = null, isLoading = false)
+                    Log.d("SearchViewModel", "Debounced search for '$typedQuery' skipped, current active query is '${_state.value.searchQuery}'")
                 }
             }
             .launchIn(viewModelScope)
     }
 
-    fun setInitialSearchQuery(query: String) {
-        _state.value = _state.value.copy(searchQuery = query, searchResults = emptyList(), searchError = null, isLoading = true)
-        _searchQueryFlow.value = query
+    private fun clearSearchResultsAndError() {
+        rawSearchResults = emptyList()
+        _state.value = _state.value.copy(searchResults = emptyList(), searchError = null, isLoading = false)
     }
 
-    fun onSearchQueryChange(query: String) {
-        _state.value = _state.value.copy(searchQuery = query)
-        if (query.isBlank()) {
-            rawSearchResults = emptyList()
-            _state.value = _state.value.copy(searchResults = emptyList(), searchError = null, isLoading = false)
-            _searchQueryFlow.value = "" 
+    fun setInitialSearchQuery(query: String) {
+        Log.d("SearchViewModel", "setInitialSearchQuery called with query: $query. Current state query: ${_state.value.searchQuery}")
+        
+        currentSearchJob?.cancel() // Cancel any ongoing search (debounced or direct)
+        rawSearchResults = emptyList() // Clear raw search results immediately
+        
+        // DO NOT update _typedQueryFlow here. It's for user typing.
+        // The TextField will get its value from _state.searchQuery.
+
+        // Set the state directly for the new query
+        _state.value = _state.value.copy(
+            searchQuery = query, 
+            searchResults = emptyList(), 
+            searchError = null, 
+            isLoading = false 
+        )
+
+        if (query.isNotBlank()) {
+            performSearch(query, isDebouncedSearch = false) // Directly perform search
         } else {
-            _searchQueryFlow.value = query
+            clearSearchResultsAndError() // Clear if the initial query is blank
         }
     }
 
+    fun onSearchQueryChange(query: String) {
+        Log.d("SearchViewModel", "onSearchQueryChange: $query")
+        // Update state for TextField responsiveness
+        _state.value = _state.value.copy(searchQuery = query) 
+        // Feed the typed query to the debouncing flow
+        _typedQueryFlow.value = query 
+        
+        if (query.isBlank()) {
+             // Immediate visual clear might be desired, or let debounce handle it.
+             // Current clearSearchResultsAndError in debounce for blank will set isLoading = false.
+             // If we clear here, it's more immediate for UI, but debounce will still run.
+             // The debounce guard (typedQuery == _state.value.searchQuery) will ensure it doesn't misbehave.
+             clearSearchResultsAndError() 
+        }
+    }
+
+    // Called by a direct action like a search button
     fun triggerSearchNow() {
-        if (_state.value.searchQuery.isNotBlank()) {
-            performSearch(_state.value.searchQuery)
+        val currentQuery = _state.value.searchQuery
+        Log.d("SearchViewModel", "triggerSearchNow called. Current query: $currentQuery")
+        if (currentQuery.isNotBlank()) {
+            currentSearchJob?.cancel() // Cancel previous if any
+            performSearch(currentQuery, isDebouncedSearch = false)
+        }
+    }
+    
+    // Main search execution logic
+    private fun performSearch(query: String, isDebouncedSearch: Boolean) {
+        Log.d("SearchViewModel", "performSearch called for query: '$query', isDebounced: $isDebouncedSearch. Current state query: '${_state.value.searchQuery}'")
+
+        currentSearchJob?.cancel() // Cancel any previous search job immediately.
+
+        // Primary Guard: If the query this performSearch was invoked with is no longer the active query in the state, abort.
+        if (query != _state.value.searchQuery) {
+            Log.w("SearchViewModel", "performSearch for '$query' is stale (current state query is '${_state.value.searchQuery}'). Aborting this search.")
+            // If this job was cancelled, the new job should handle isLoading.
+            // If this job wasn't cancelled but is stale, and it was the one that set isLoading = true,
+            // then isLoading might be stuck. However, any action that changes _state.value.searchQuery
+            // should also manage isLoading (e.g. setInitialSearchQuery sets it to false, then true via new performSearch).
+            return
+        }
+
+        currentSearchJob = viewModelScope.launch {
+            // Set loading true for THIS query's search attempt and clear previous error.
+            // Results are cleared by callers like setInitialSearchQuery or handled by success/error branches.
+            _state.value = _state.value.copy(isLoading = true, searchError = null)
+            
+            searchRepository.searchMedicine(SearchRequest(medicineName = query))
+                .collect { resource ->
+                    // Secondary Guard: Only update state if the result is for the currently active query.
+                    if (query == _state.value.searchQuery) {
+                        when (resource) {
+                            is Resource.Loading -> {
+                                // isLoading is already true.
+                            }
+                            is Resource.Success -> {
+                                rawSearchResults = resource.data?.data ?: emptyList()
+                                // Set isLoading false *before* any further processing like distance calculation.
+                                _state.value = _state.value.copy(isLoading = false) 
+                                if (rawSearchResults.isEmpty() && query.isNotBlank()) {
+                                    _state.value = _state.value.copy(
+                                        searchResults = emptyList(),
+                                        searchError = "$NO_MEDICINE_FOUND_MSG_PREFIX'$query'"
+                                        // isLoading is already false from above
+                                    )
+                                } else {
+                                    updateSearchResultsWithDistances() // This will update searchResults in state.
+                                }
+                            }
+                            is Resource.Error -> {
+                                rawSearchResults = emptyList()
+                                _state.value = _state.value.copy(
+                                    isLoading = false,
+                                    searchError = resource.message ?: "An unknown error occurred",
+                                    searchResults = emptyList()
+                                )
+                            }
+                        }
+                    } else {
+                        Log.w("SearchViewModel", "Search result for '$query' received, but current query is now '${_state.value.searchQuery}'. Discarding result.")
+                        // If this job is still running but is for an old query, its isLoading contribution should be ignored
+                        // as the new query's job will manage isLoading.
+                    }
+                }
+            
+            // Safeguard: After collection, if this job was for the active query and it's still loading, set loading to false.
+            // This handles cases where the flow might complete without hitting Success/Error that explicitly sets isLoading = false.
+            if (query == _state.value.searchQuery && _state.value.isLoading) {
+                Log.d("SearchViewModel", "Search for '$query' coroutine ended, ensuring isLoading is false.")
+                _state.value = _state.value.copy(isLoading = false)
+            }
         }
     }
 
@@ -144,42 +250,6 @@ class SearchViewModel @Inject constructor(
         Log.d("SearchViewModel", "Location Selected: $actualLocation")
         _state.value = _state.value.copy(selectedLocation = actualLocation)
         updateSearchResultsWithDistances() // Apply filters and potentially update distances
-    }
-
-    private fun performSearch(query: String) {
-        viewModelScope.launch {
-            _state.value = _state.value.copy(isLoading = true, searchError = null)
-            
-            searchRepository.searchMedicine(SearchRequest(medicineName = query))
-                .collect { resource ->
-                    when (resource) {
-                        is Resource.Loading -> {
-                            _state.value = _state.value.copy(isLoading = true)
-                        }
-                        is Resource.Success -> {
-                            rawSearchResults = resource.data?.data ?: emptyList()
-                            if (rawSearchResults.isEmpty() && query.isNotBlank()) {
-                                _state.value = _state.value.copy(
-                                    isLoading = false,
-                                    searchResults = emptyList(),
-                                    searchError = "$NO_MEDICINE_FOUND_MSG_PREFIX'$query'"
-                                )
-                            } else {
-                                // Update state with possibly distance-updated results
-                                updateSearchResultsWithDistances() 
-                            }
-                        }
-                        is Resource.Error -> {
-                            rawSearchResults = emptyList()
-                            _state.value = _state.value.copy(
-                                isLoading = false,
-                                searchError = resource.message ?: "An unknown error occurred",
-                                searchResults = emptyList()
-                            )
-                        }
-                    }
-                }
-        }
     }
 
     private fun updateSearchResultsWithDistances() {
@@ -242,6 +312,4 @@ class SearchViewModel @Inject constructor(
             priceMatch && locationMatch
         }
     }
-
-    // Placeholder functions are now removed.
 }

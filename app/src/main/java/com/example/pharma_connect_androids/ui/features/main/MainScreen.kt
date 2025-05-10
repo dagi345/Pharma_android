@@ -122,7 +122,16 @@ fun MainScreen(
         MainContentNavHost(
             mainNavController = appNavController,
             bottomNavController = bottomNavController,
-            innerPadding = innerPadding
+            innerPadding = innerPadding,
+            onNavigateToSearchTabWithQuery = { query ->
+                bottomNavController.navigate(Screen.Search.createRoute(query)) {
+                    popUpTo(bottomNavController.graph.startDestinationId) {
+                        saveState = true
+                    }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            }
         )
     }
 }
@@ -134,7 +143,8 @@ fun MainScreen(
 fun MainContentNavHost(
     mainNavController: NavHostController,
     bottomNavController: NavHostController,
-    innerPadding: PaddingValues
+    innerPadding: PaddingValues,
+    onNavigateToSearchTabWithQuery: (query: String) -> Unit
 ) {
     val startDestination = Screen.Home.route
     
@@ -148,7 +158,8 @@ fun MainContentNavHost(
                 navController = mainNavController,
                 onNavigateToRegister = {
                     mainNavController.navigate(Screen.Register.route)
-                }
+                },
+                onNavigateToSearchTabWithQuery = onNavigateToSearchTabWithQuery
             )
         }
         composable(
@@ -170,7 +181,7 @@ fun MainContentNavHost(
         composable(Screen.JoinPharmacy.route) { backStackEntry ->
             JoinPharmacyScreen(
                 onNavigateBack = { bottomNavController.popBackStack() },
-                onSubmitSuccess = {
+                onSubmitSuccess = { 
                     bottomNavController.navigate(Screen.Home.route) {
                         popUpTo(Screen.Home.route) { inclusive = true }
                     }
@@ -259,7 +270,8 @@ fun MainContentNavHost(
 fun HomeScreen(
     navController: NavController,
     onNavigateToRegister: () -> Unit,
-    homeViewModel: HomeViewModel = hiltViewModel()
+    homeViewModel: HomeViewModel = hiltViewModel(),
+    onNavigateToSearchTabWithQuery: (query: String) -> Unit
 ) {
     val scrollState = rememberScrollState()
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -311,7 +323,7 @@ fun HomeScreen(
                 keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = {
                     if (searchQuery.isNotBlank()) {
-                        navController.navigate(Screen.Search.createRoute(searchQuery))
+                        onNavigateToSearchTabWithQuery(searchQuery.trim())
                         keyboardController?.hide()
                     }
                 })
@@ -379,7 +391,9 @@ fun HomeScreen(
                 homeState.nearbyPharmacies.isNotEmpty() -> {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(homeState.nearbyPharmacies) { pharmacy ->
-                            NearbyPharmacyCard(pharmacy = pharmacy)
+                            NearbyPharmacyCard(pharmacy = pharmacy, onPharmacyClick = { pharmacyId ->
+                                navController.navigate(Screen.UserPharmacyDetail.createRoute(pharmacyId))
+                            })
                         }
                     }
                 }
@@ -400,13 +414,41 @@ fun HomeScreen(
                  }
             }
         }
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Most Searched Medicines Section
+        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+            Text(
+                text = "Most Searched Medicines",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(commonMedicines) { medicineInfo ->
+                    MedicineCard(
+                        medicine = medicineInfo,
+                        onMedicineClick = {
+                            val query = medicineInfo.name.trim()
+                            onNavigateToSearchTabWithQuery(query)
+                        }
+                    )
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(32.dp))
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NearbyPharmacyCard(pharmacy: Pharmacy) {
+fun NearbyPharmacyCard(
+    pharmacy: Pharmacy,
+    onPharmacyClick: (pharmacyId: String) -> Unit
+) {
     Card(
+        onClick = { onPharmacyClick(pharmacy.id) },
         modifier = Modifier.size(width = 180.dp, height = 160.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         shape = MaterialTheme.shapes.medium
@@ -452,7 +494,8 @@ fun HomeScreenPreview() {
     PharmaConnectAndroidSTheme {
         HomeScreen(
             onNavigateToRegister = {},
-            navController = rememberNavController()
+            navController = rememberNavController(),
+            onNavigateToSearchTabWithQuery = { _ -> }
         )
     }
 }
@@ -462,5 +505,52 @@ fun HomeScreenPreview() {
 fun PlaceholderScreen(name: String) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text("$name Screen (Placeholder)")
+    }
+}
+
+// Data for the new carousel
+data class MedicineInfo(val name: String, val imageResId: Int? = null) // imageResId is optional for future use
+
+val commonMedicines = listOf(
+    MedicineInfo("Paracetamol"),
+    MedicineInfo("Panadol"),
+    MedicineInfo("Amoxicillin"),
+    MedicineInfo("Ibuprofen"),
+    MedicineInfo("Aspirin"),
+    MedicineInfo("Metformin"),
+    MedicineInfo("Omeprazole"),
+    MedicineInfo("Salbutamol"),
+    MedicineInfo("Cetirizine")
+)
+
+@Composable
+fun MedicineCard(
+    medicine: MedicineInfo,
+    onMedicineClick: (medicineName: String) -> Unit
+) {
+    Card(
+        onClick = { onMedicineClick(medicine.name.trim()) }, // Trim to be safe, though names are single words here
+        modifier = Modifier
+            .width(120.dp) // Slightly smaller than pharmacy cards
+            .height(100.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            // Optionally, add an icon or generic image for medicines later using medicine.imageResId
+            // For now, just text.
+            // Icon(painterResource(id = R.drawable.ic_medicine_placeholder), contentDescription = null, modifier = Modifier.size(40.dp).padding(bottom=4.dp))
+            Text(
+                text = medicine.name,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center,
+                maxLines = 2
+            )
+        }
     }
 } 
