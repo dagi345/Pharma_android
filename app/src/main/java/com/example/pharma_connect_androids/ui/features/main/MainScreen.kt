@@ -1,22 +1,55 @@
 package com.example.pharma_connect_androids.ui.features.main
 
+import android.Manifest
+import android.app.Activity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.app.ActivityCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import coil.compose.AsyncImage
+import com.example.pharma_connect_androids.R
+import com.example.pharma_connect_androids.data.models.Pharmacy
 import com.example.pharma_connect_androids.domain.model.UserRole
+import com.example.pharma_connect_androids.ui.components.PharmaConnectTopAppBar
 import com.example.pharma_connect_androids.ui.navigation.BottomNavItems
 import com.example.pharma_connect_androids.ui.navigation.BottomNavigationBar
 import com.example.pharma_connect_androids.ui.navigation.Screen
+import com.example.pharma_connect_androids.ui.theme.PharmaConnectAndroidSTheme
 import com.example.pharma_connect_androids.ui.features.search.SearchScreen
 import com.example.pharma_connect_androids.ui.features.profile.ProfileScreen
 import com.example.pharma_connect_androids.ui.features.admin.AdminApplicationScreen
@@ -30,47 +63,6 @@ import com.example.pharma_connect_androids.ui.features.pharmacy.JoinPharmacyScre
 import com.example.pharma_connect_androids.ui.features.owner.OwnerAddMedicineScreen
 import com.example.pharma_connect_androids.ui.features.owner.OwnerInventoryScreen
 import com.example.pharma_connect_androids.ui.features.owner.UpdateInventoryItemScreen
-import com.example.pharma_connect_androids.ui.features.pharmacy.JoinPharmacyViewModel
-import com.google.android.gms.maps.model.LatLng
-import androidx.compose.runtime.livedata.observeAsState
-import com.example.pharma_connect_androids.ui.components.PharmaConnectTopAppBar
-import androidx.compose.material3.Scaffold
-import androidx.compose.runtime.LaunchedEffect
-import android.Manifest
-import android.app.Activity
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
-import androidx.compose.material3.Button
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ContentScale
-import androidx.compose.material3.painterResource
-import androidx.compose.material3.TextAlign
-import androidx.compose.material3.Preview
-import androidx.compose.ui.ExperimentalComposeUiApi
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import com.example.pharma_connect_androids.R
-import com.example.pharma_connect_androids.data.models.Pharmacy
-import coil.compose.AsyncImage
-import androidx.core.app.ActivityCompat
 
 /**
  * Main layout composable that includes the Scaffold and Bottom Navigation.
@@ -424,10 +416,10 @@ fun NearbyPharmacyCard(pharmacy: Pharmacy) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             AsyncImage(
-                model = pharmacy.image ?: R.drawable.logo_trans,
+                model = pharmacy.image ?: R.drawable.logo,
                 contentDescription = pharmacy.name,
-                placeholder = painterResource(id = R.drawable.logo_trans),
-                error = painterResource(id = R.drawable.logo_trans),
+                placeholder = painterResource(id = R.drawable.logo),
+                error = painterResource(id = R.drawable.logo),
                 modifier = Modifier
                     .height(80.dp)
                     .fillMaxWidth(),
@@ -457,10 +449,12 @@ fun NearbyPharmacyCard(pharmacy: Pharmacy) {
 @Preview(showBackground = true)
 @Composable
 fun HomeScreenPreview() {
-    HomeScreen(
-        onNavigateToRegister = {},
-        navController = rememberNavController()
-    )
+    PharmaConnectAndroidSTheme {
+        HomeScreen(
+            onNavigateToRegister = {},
+            navController = rememberNavController()
+        )
+    }
 }
 
 // Simple placeholder for screens not yet built
