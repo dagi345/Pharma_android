@@ -7,6 +7,7 @@ import com.example.pharma_connect_androids.data.network.SearchApiService
 import com.example.pharma_connect_androids.data.network.PharmacyApiService
 import com.example.pharma_connect_androids.data.network.ApplicationApiService
 import com.example.pharma_connect_androids.data.network.MedicineApiService
+import com.example.pharma_connect_androids.data.api.UserApiService
 import com.example.pharma_connect_androids.util.AuthInterceptor
 import com.example.pharma_connect_androids.util.Constants
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
@@ -111,6 +112,13 @@ object NetworkModule {
     @Singleton
     fun provideMedicineApiService(retrofit: Retrofit): MedicineApiService {
         return retrofit.create(MedicineApiService::class.java)
+    }
+
+    // Provides UserApiService (depends on Retrofit) - Added for Cart functionality
+    @Provides
+    @Singleton
+    fun provideUserApiService(retrofit: Retrofit): UserApiService {
+        return retrofit.create(UserApiService::class.java)
     }
 
     // Add provider for other API services later when needed

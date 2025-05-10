@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.outlined.AddShoppingCart // Added for Add to Cart button
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,6 +35,7 @@ import com.example.pharma_connect_androids.R // For placeholder image
 import com.example.pharma_connect_androids.data.models.SearchResultItem
 import com.example.pharma_connect_androids.ui.theme.PharmaConnectAndroidSTheme
 import com.google.android.gms.location.LocationServices // Required for FusedLocationProviderClient
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -46,6 +48,22 @@ fun SearchScreen(
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+
+    // Handle Add to Cart Messages
+    LaunchedEffect(state.addToCartMessage) {
+        state.addToCartMessage?.let {
+            message ->
+            coroutineScope.launch {
+                snackbarHostState.showSnackbar(
+                    message = message,
+                    duration = SnackbarDuration.Short
+                )
+                viewModel.clearAddToCartMessage() // Clear message after showing
+            }
+        }
+    }
 
     val requestPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
@@ -203,16 +221,20 @@ fun SearchScreen(
                  ) {
                      item { // Header for results (optional)
                          Text(
-                             "Results for: ${state.searchQuery}",
+                             text = "Results for: ${state.searchQuery}",
                              style = MaterialTheme.typography.titleMedium,
                              modifier = Modifier.padding(bottom = 8.dp)
                          )
                      }
-                     items(state.searchResults) { resultItem ->
+                     items(state.searchResults, key = { it.inventoryId }) { resultItem ->
                          SearchResultItemCard(
                              item = resultItem,
+                             isAddingToCart = state.isAddingToCart, // Pass loading state
                              onViewDetailClick = {
                                  onNavigateToPharmacyDetail(resultItem.pharmacyId)
+                             },
+                             onAddToCartClick = { inventoryId -> // Pass callback
+                                 viewModel.addToCart(inventoryId)
                              }
                          )
                      }
@@ -293,7 +315,9 @@ fun FilterDropdown(
 @Composable
 fun SearchResultItemCard(
     item: SearchResultItem,
-    onViewDetailClick: () -> Unit
+    isAddingToCart: Boolean, // Added for loading state
+    onViewDetailClick: () -> Unit,
+    onAddToCartClick: (inventoryId: String) -> Unit // Added callback
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -342,8 +366,24 @@ fun SearchResultItemCard(
                 Text("Br ${String.format(Locale.US, "%.2f", item.price)}", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
 
                 // Button / Link Placeholder
-                TextButton(onClick = { onViewDetailClick() }) {
-                    Text("See pharmacy detail")
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = { onViewDetailClick() }) {
+                        Text("See pharmacy detail")
+                    }
+                    IconButton(onClick = { onAddToCartClick(item.inventoryId) }, enabled = !isAddingToCart) {
+                        if (isAddingToCart) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                        } else {
+                            Icon(
+                                imageVector = Icons.Outlined.AddShoppingCart,
+                                contentDescription = "Add to cart"
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -393,7 +433,12 @@ fun SearchScreenPreview_Results() {
             ) {
                  item { Text("Results for: ${previewState.searchQuery}", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 8.dp)) }
                  items(previewState.searchResults) { resultItem ->
-                    SearchResultItemCard(item = resultItem, onViewDetailClick = {})
+                    SearchResultItemCard(
+                        item = resultItem, 
+                        isAddingToCart = false, // Added for preview
+                        onViewDetailClick = {},
+                        onAddToCartClick = {} // Added for preview
+                        )
                 }
              }
          }

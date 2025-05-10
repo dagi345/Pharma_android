@@ -26,6 +26,8 @@ import androidx.compose.material.icons.filled.AddShoppingCart
 import androidx.compose.material.icons.outlined.AddShoppingCart
 import androidx.compose.material.icons.filled.AddBusiness // Import for Join Us
 import androidx.compose.material.icons.outlined.AddBusiness // Import for Join Us
+import androidx.compose.material.icons.filled.ShoppingCart // Import for Cart/MyMedicines
+import androidx.compose.material.icons.outlined.ShoppingCart // Import for Cart/MyMedicines
 
 /**
  * Represents items in the bottom navigation bar.
@@ -62,8 +64,16 @@ object BottomNavItems {
         selectedIcon = Icons.Filled.AddBusiness, 
         unselectedIcon = Icons.Outlined.AddBusiness
     )
+
+    val MyMedicines = BottomNavItem(
+        label = "Cart",
+        route = Screen.MyMedicines.route,
+        selectedIcon = Icons.Filled.ShoppingCart,
+        unselectedIcon = Icons.Outlined.ShoppingCart
+    )
+
     // Update UserItems list
-    val UserItems = listOf(Home, Search, JoinUs)
+    val UserItems = listOf(Home, Search, MyMedicines, JoinUs)
 
     // --- Owner Items (Revised) ---
     val MyPharmacy = BottomNavItem(

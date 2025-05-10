@@ -63,6 +63,7 @@ import com.example.pharma_connect_androids.ui.features.pharmacy.JoinPharmacyScre
 import com.example.pharma_connect_androids.ui.features.owner.OwnerAddMedicineScreen
 import com.example.pharma_connect_androids.ui.features.owner.OwnerInventoryScreen
 import com.example.pharma_connect_androids.ui.features.owner.UpdateInventoryItemScreen
+import com.example.pharma_connect_androids.ui.features.cart.MyMedicinesScreen
 
 /**
  * Main layout composable that includes the Scaffold and Bottom Navigation.
@@ -261,6 +262,9 @@ fun MainContentNavHost(
                 pharmacyId = pharmacyId,
                 onNavigateBack = { bottomNavController.popBackStack() }
             )
+        }
+        composable(Screen.MyMedicines.route) {
+            MyMedicinesScreen()
         }
     }
 }

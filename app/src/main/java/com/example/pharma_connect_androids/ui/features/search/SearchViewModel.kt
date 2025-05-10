@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.pharma_connect_androids.data.models.SearchRequest
 import com.example.pharma_connect_androids.data.models.SearchResultItem
 import com.example.pharma_connect_androids.data.repository.SearchRepository
+import com.example.pharma_connect_androids.data.repository.CartRepository
 import com.example.pharma_connect_androids.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
@@ -34,7 +35,10 @@ data class SearchScreenState(
     val selectedLocation: String? = null,
     val currentUserLocation: Location? = null, // User's current location
     val locationPermissionRequested: Boolean = false, // To track if we've asked for permission at least once
-    val showLocationPermissionRationale: Boolean = false // To show rationale dialog if needed
+    val showLocationPermissionRationale: Boolean = false, // To show rationale dialog if needed
+    // Cart related state
+    val isAddingToCart: Boolean = false, // To show loading for add to cart action
+    val addToCartMessage: String? = null // For displaying messages like "Added to cart" or errors
 )
 
 // Predefined filter options
@@ -58,7 +62,8 @@ val locations: List<String> = listOf(
 @OptIn(FlowPreview::class) // Needed for debounce
 @HiltViewModel
 class SearchViewModel @Inject constructor(
-    private val searchRepository: SearchRepository
+    private val searchRepository: SearchRepository,
+    private val cartRepository: CartRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SearchScreenState())
@@ -311,5 +316,34 @@ class SearchViewModel @Inject constructor(
 
             priceMatch && locationMatch
         }
+    }
+
+    // --- Cart Functionality ---
+    fun addToCart(inventoryId: String) {
+        viewModelScope.launch {
+            cartRepository.addToCart(inventoryId).onEach { result ->
+                when (result) {
+                    is Resource.Loading -> {
+                        _state.value = _state.value.copy(isAddingToCart = true, addToCartMessage = null)
+                    }
+                    is Resource.Success -> {
+                        _state.value = _state.value.copy(
+                            isAddingToCart = false,
+                            addToCartMessage = result.data?.userId?.let { "Added to cart successfully!" } ?: "Added to cart!" // Example message
+                        )
+                    }
+                    is Resource.Error -> {
+                        _state.value = _state.value.copy(
+                            isAddingToCart = false,
+                            addToCartMessage = result.message ?: "Failed to add to cart"
+                        )
+                    }
+                }
+            }.launchIn(viewModelScope) // Use launchIn for a flow that should be collected for its side effects
+        }
+    }
+
+    fun clearAddToCartMessage() {
+        _state.value = _state.value.copy(addToCartMessage = null)
     }
 }

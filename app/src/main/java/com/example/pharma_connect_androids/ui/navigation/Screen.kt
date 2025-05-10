@@ -88,6 +88,8 @@ sealed class Screen(val route: String) {
         const val ARG_PHARMACY_ID = "pharmacyId"
     }
 
+    object MyMedicines : Screen("my_medicines_screen") // Screen for user's saved medicines
+
     // Helper function to append arguments (example, might need adjustment)
     fun withArgs(vararg args: String): String {
         return buildString {
